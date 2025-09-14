@@ -80,12 +80,13 @@ async function addStudent(e) {
   };
 
   try {
+    console.debug("addStudent payload:", body);
     await postForm(body);
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
   } catch (err) {
     console.error("addStudent error:", err);
-    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
+    alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
     console.error(err);
   }
 }
@@ -103,13 +104,14 @@ async function addSchedule(e) {
   };
 
   try {
+    console.debug("addSchedule payload:", body);
     await postForm(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
     loadSchedule();
   } catch (err) {
     console.error("addSchedule error:", err);
-    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
+    alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
     console.error(err);
   }
 }
@@ -117,15 +119,17 @@ async function addSchedule(e) {
 // ฟังก์ชันลา
 async function leave(date, time, teacher, studentCode) {
   try {
-    await postForm({
+    const payload = {
       action: "leave",
       date, time, teacher, studentCode
-    });
+    };
+    console.debug("leave payload:", payload);
+    await postForm(payload);
     alert("บันทึกการลาแล้ว ✅");
     loadSchedule();
   } catch (err) {
     console.error("leave error:", err);
-    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
+    alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
     console.error(err);
   }
 }
@@ -148,17 +152,11 @@ async function postForm(data) {
     method: "POST",
     body: form
   });
-  // Even if server returns non-JSON, this prevents silent failures
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  let text;
-  try {
-    text = await res.text();
-  } catch (_) {
-    return null;
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    // Surface status + a snippet of response body
+    const snippet = text ? ` - ${text.slice(0, 200)}` : "";
+    throw new Error(`HTTP ${res.status}${snippet}`);
   }
-  try {
-    return JSON.parse(text);
-  } catch (_) {
-    return text;
-  }
+  try { return JSON.parse(text); } catch (_) { return text; }
 }
