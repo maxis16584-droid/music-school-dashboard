@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbzCL-qUV1YZDfzSn8uF-QeRT1biXoIq8fwvnSCIszACYhWtcOInYbeotD1wFb-bSOXu/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyGnSyNfL7c9l_sFAbKXZTonlDtefhfqPqlreUMbj2tLyi0hMJk26PU05F8v3swNVoM/exec";
 
 // ------------------
 // Theme: Light/Dark
@@ -99,7 +99,7 @@ async function addStudent(e) {
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
     // Refresh weekly schedule to reflect newly generated sessions
-    loadWeekSchedule();
+    loadStudentsView();
   } catch (err) {
     console.error("addStudent error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -124,7 +124,7 @@ async function addSchedule(e) {
     await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
-    loadWeekSchedule();
+    loadStudentsView();
   } catch (err) {
     console.error("addSchedule error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -142,7 +142,7 @@ async function leave(date, time, teacher, studentCode) {
     console.debug("leave payload:", payload);
     await postFormStrict(payload);
     alert("บันทึกการลาแล้ว ✅");
-    loadWeekSchedule();
+    loadStudentsView();
   } catch (err) {
     console.error("leave error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -153,8 +153,8 @@ async function leave(date, time, teacher, studentCode) {
 // ผูก event กับ form
 document.getElementById("addStudentForm").addEventListener("submit", addStudent);
 
-// โหลดตารางครั้งแรก
-initScheduleView();
+// โหลดตารางครั้งแรก (students only)
+loadStudentsView();
 
 // แสดงตาราง จันทร์-อาทิตย์ จาก schedule sheet พร้อมปุ่มลา
 async function loadWeekSchedule() {
@@ -190,6 +190,15 @@ async function loadWeekSchedule() {
     }
 
     rows.sort((a,b) => (a._date - b._date) || String(a.Time).localeCompare(String(b.Time)));
+
+    // Auto-switch to 'all' if week has no items
+    if (rows.length === 0 && mode === 'week') {
+      const sel = document.getElementById('viewMode');
+      if (sel) {
+        sel.value = 'all';
+        return loadWeekSchedule();
+      }
+    }
 
     let html = "<table>";
     html += "<tr><th>วัน</th><th>วันที่</th><th>เวลา</th><th>Student Code</th><th>Student Name</th><th>ครูผู้สอน</th><th>Status</th><th>Action</th></tr>";
@@ -236,6 +245,45 @@ function parseDate(str) {
   const [y,m,dd] = String(str).split('-').map(Number);
   if (!y || !m || !dd) return null;
   return new Date(y, m-1, dd);
+}
+
+// Students-only view: list Mon–Sun from students sheet
+async function loadStudentsView() {
+  try {
+    const res = await fetch(API_URL + "?sheet=students", { cache: "no-store" });
+    const students = await res.json();
+    const order = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+    const dayTH = { Sun:"อาทิตย์", Mon:"จันทร์", Tue:"อังคาร", Wed:"พุธ", Thu:"พฤหัส", Fri:"ศุกร์", Sat:"เสาร์" };
+
+    const rows = students
+      .filter(s => s.DayOfWeek && s.Time)
+      .map(s => ({
+        day: String(s.DayOfWeek).slice(0,3),
+        time: String(s.Time),
+        code: String(s.Code || ''),
+        name: String(s.Name || ''),
+        teacher: String(s.Teacher || '')
+      }))
+      .sort((a,b) => (order[a.day] - order[b.day]) || a.time.localeCompare(b.time) || a.code.localeCompare(b.code));
+
+    let html = "<table>";
+    html += "<tr><th>วัน</th><th>เวลา</th><th>Student Code</th><th>Student Name</th><th>ครูผู้สอน</th></tr>";
+    for (const r of rows) {
+      html += `
+        <tr>
+          <td>${dayTH[r.day] || r.day}</td>
+          <td>${r.time}</td>
+          <td>${r.code}</td>
+          <td>${r.name}</td>
+          <td>${r.teacher}</td>
+        </tr>`;
+    }
+    html += "</table>";
+    document.getElementById("schedule").innerHTML = html;
+  } catch (err) {
+    document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
+    console.error(err);
+  }
 }
 
 function initScheduleView() {
