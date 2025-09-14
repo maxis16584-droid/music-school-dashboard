@@ -247,6 +247,27 @@ function parseDate(str) {
   return new Date(y, m-1, dd);
 }
 
+// Format possible ISO date-time or plain strings to HH:mm
+function formatTimeCell(val) {
+  if (val == null || val === "") return "";
+  const s = String(val);
+  // Already HH:mm
+  if (/^\d{1,2}:\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    try {
+      return d.toLocaleTimeString('th-TH', {
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok'
+      });
+    } catch (_) {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+  }
+  return s;
+}
+
 // Students-only view: list Mon–Sun from students sheet
 async function loadStudentsView() {
   try {
@@ -272,7 +293,7 @@ async function loadStudentsView() {
       html += `
         <tr>
           <td>${dayTH[r.day] || r.day}</td>
-          <td>${r.time}</td>
+          <td>${formatTimeCell(r.time)}</td>
           <td>${r.code}</td>
           <td>${r.name}</td>
           <td>${r.teacher}</td>
