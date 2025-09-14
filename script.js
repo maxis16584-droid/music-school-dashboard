@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbz_32mF7RC-oR6l-kAetz8WBV0N96aX588Xr1f8PRZHVECY_fxAuP7RF3dOB_X-DMnR/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyUeoWYVo42aenxEVaR1ajp8iY_9n42qBFzo-oO_RhweZxYJ4AAxcXIbHcakhXN_T-e/exec";
 
 // ------------------
 // Theme: Light/Dark
@@ -87,7 +87,10 @@ async function addStudent(e) {
     id: document.getElementById("studentId").value,
     code: document.getElementById("studentCode").value,
     name: document.getElementById("studentName").value,
-    course_total: parseInt(document.getElementById("courseTotal").value)
+    course_total: parseInt(document.getElementById("courseTotal").value),
+    day_of_week: document.getElementById("weekday")?.value,
+    time: document.getElementById("weeklyTime")?.value,
+    teacher: document.getElementById("teacherStudent")?.value
   };
 
   try {
@@ -119,7 +122,7 @@ async function addSchedule(e) {
     await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
-    loadSchedule();
+    loadWeeklyGrid();
   } catch (err) {
     console.error("addSchedule error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -137,7 +140,7 @@ async function leave(date, time, teacher, studentCode) {
     console.debug("leave payload:", payload);
     await postFormStrict(payload);
     alert("บันทึกการลาแล้ว ✅");
-    loadSchedule();
+    loadWeeklyGrid();
   } catch (err) {
     console.error("leave error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -150,7 +153,47 @@ document.getElementById("addStudentForm").addEventListener("submit", addStudent)
 document.getElementById("addScheduleForm").addEventListener("submit", addSchedule);
 
 // โหลดตารางครั้งแรก
-loadSchedule();
+loadWeeklyGrid();
+
+// แสดงตาราง จันทร์-ศุกร์ ตามเวลาที่เด็กลงไว้ จาก students sheet
+async function loadWeeklyGrid() {
+  try {
+    const res = await fetch(API_URL + "?sheet=students", { cache: "no-store" });
+    const students = await res.json();
+    const days = ["Mon","Tue","Wed","Thu","Fri"];
+    const dayTH = { Mon:"จันทร์", Tue:"อังคาร", Wed:"พุธ", Thu:"พฤหัส", Fri:"ศุกร์" };
+
+    const timesSet = new Set();
+    students.forEach(s => {
+      if (days.includes(s.DayOfWeek) && s.Time) timesSet.add(s.Time);
+    });
+    const times = Array.from(timesSet).sort();
+
+    if (times.length === 0) {
+      document.getElementById("schedule").innerHTML = "<p>ยังไม่มีข้อมูลตาราง</p>";
+      return;
+    }
+
+    let html = "<table>";
+    html += "<tr><th>Time</th>" + days.map(d => `<th>${dayTH[d]}</th>`).join("") + "</tr>";
+
+    times.forEach(t => {
+      html += `<tr><th>${t}</th>`;
+      days.forEach(d => {
+        const entries = students.filter(s => s.DayOfWeek === d && s.Time === t);
+        const cell = entries.map(s => `${s.ID || s.Code} - ${s.Teacher || ''}`).join('<br/>');
+        html += `<td>${cell || ''}</td>`;
+      });
+      html += "</tr>";
+    });
+
+    html += "</table>";
+    document.getElementById("schedule").innerHTML = html;
+  } catch (err) {
+    document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
+    console.error(err);
+  }
+}
 
 // ---------- Helpers ----------
 async function postForm(data) {

@@ -21,6 +21,16 @@
     <input type="text" id="studentCode" placeholder="Student Code (M1,A2...)" required />
     <input type="text" id="studentName" placeholder="Student Name" required />
     <input type="number" id="courseTotal" placeholder="Total Courses (4,8,20)" required />
+    <select id="weekday" required>
+      <option value="" disabled selected>เลือกวันเรียน</option>
+      <option value="Mon">ทุกวันจันทร์</option>
+      <option value="Tue">ทุกวันอังคาร</option>
+      <option value="Wed">ทุกวันพุธ</option>
+      <option value="Thu">ทุกวันพฤหัสบดี</option>
+      <option value="Fri">ทุกวันศุกร์</option>
+    </select>
+    <input type="time" id="weeklyTime" required />
+    <input type="text" id="teacherStudent" placeholder="Teacher Name" required />
     <button type="submit">Add Student</button>
   </form>
 
