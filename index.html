@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music School Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">🌙 Dark</button>
+  <h1>🎶 Music School Dashboard</h1>
+
+  <!-- ตารางแสดง schedule -->
+  <div id="schedule">Loading...</div>
+
+  <!-- ฟอร์มเพิ่มนักเรียนใหม่ -->
+  <h2>➕ Add Student</h2>
+  <form id="addStudentForm">
+    <input type="text" id="studentId" placeholder="Student ID (เช่น 001)" required />
+    <input type="text" id="studentCode" placeholder="Student Code (M1,A2...)" required />
+    <input type="text" id="studentName" placeholder="Student Name" required />
+    <input type="number" id="courseTotal" placeholder="Total Courses (4,8,20)" required />
+    <button type="submit">Add Student</button>
+  </form>
+
+  <!-- ฟอร์มเพิ่มตารางเรียน -->
+  <h2>📅 Add Schedule</h2>
+  <form id="addScheduleForm">
+    <input type="date" id="classDate" required />
+    <input type="text" id="classTime" placeholder="Time (e.g., 17:00)" required />
+    <input type="text" id="teacher" placeholder="Teacher Name" required />
+    <input type="text" id="studentCodeForSchedule" placeholder="Student Code" required />
+    <button type="submit">Add Schedule</button>
+  </form>
+
+  <script src="script.js"></script>
+</body>
+</html>
