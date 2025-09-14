@@ -88,9 +88,9 @@ async function addStudent(e) {
     code: document.getElementById("studentCode").value,
     name: document.getElementById("studentName").value,
     course_total: parseInt(document.getElementById("courseTotal").value),
-    day_of_week: document.getElementById("weekday")?.value,
-    time: document.getElementById("weeklyTime")?.value,
-    teacher: document.getElementById("teacherStudent")?.value
+    day_of_week: document.getElementById("weekday").value,
+    time: document.getElementById("weeklyTime").value,
+    teacher: document.getElementById("teacherStudent").value
   };
 
   try {
@@ -150,7 +150,6 @@ async function leave(date, time, teacher, studentCode) {
 
 // ผูก event กับ form
 document.getElementById("addStudentForm").addEventListener("submit", addStudent);
-document.getElementById("addScheduleForm").addEventListener("submit", addSchedule);
 
 // โหลดตารางครั้งแรก
 loadWeeklyGrid();
@@ -160,8 +159,8 @@ async function loadWeeklyGrid() {
   try {
     const res = await fetch(API_URL + "?sheet=students", { cache: "no-store" });
     const students = await res.json();
-    const days = ["Mon","Tue","Wed","Thu","Fri"];
-    const dayTH = { Mon:"จันทร์", Tue:"อังคาร", Wed:"พุธ", Thu:"พฤหัส", Fri:"ศุกร์" };
+    const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const dayTH = { Mon:"จันทร์", Tue:"อังคาร", Wed:"พุธ", Thu:"พฤหัส", Fri:"ศุกร์", Sat:"เสาร์", Sun:"อาทิตย์" };
 
     const timesSet = new Set();
     students.forEach(s => {

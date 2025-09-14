@@ -34,6 +34,7 @@ h1, h2 {
 
 #schedule {
   margin-bottom: 30px;
+  overflow-x: auto;
 }
 
 table {
@@ -75,7 +76,7 @@ form {
   text-align: center;
 }
 
-form input {
+form input, form select {
   padding: 8px;
   margin: 5px;
   border: 1px solid var(--border);

@@ -28,21 +28,21 @@
       <option value="Wed">ทุกวันพุธ</option>
       <option value="Thu">ทุกวันพฤหัสบดี</option>
       <option value="Fri">ทุกวันศุกร์</option>
+      <option value="Sat">ทุกวันเสาร์</option>
+      <option value="Sun">ทุกวันอาทิตย์</option>
     </select>
     <input type="time" id="weeklyTime" required />
-    <input type="text" id="teacherStudent" placeholder="Teacher Name" required />
+    <select id="teacherStudent" required>
+      <option value="" disabled selected>เลือกครูผู้สอน</option>
+      <option value="พี่โทน">พี่โทน</option>
+      <option value="พี่หนึ่ง">พี่หนึ่ง</option>
+      <option value="พี่เอก">พี่เอก</option>
+      <option value="พี่บอย">พี่บอย</option>
+      <option value="Others">Others</option>
+    </select>
     <button type="submit">Add Student</button>
   </form>
 
-  <!-- ฟอร์มเพิ่มตารางเรียน -->
-  <h2>📅 Add Schedule</h2>
-  <form id="addScheduleForm">
-    <input type="date" id="classDate" required />
-    <input type="text" id="classTime" placeholder="Time (e.g., 17:00)" required />
-    <input type="text" id="teacher" placeholder="Teacher Name" required />
-    <input type="text" id="studentCodeForSchedule" placeholder="Student Code" required />
-    <button type="submit">Add Schedule</button>
-  </form>
 
   <script src="script.js"></script>
 </body>
