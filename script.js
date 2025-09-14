@@ -92,7 +92,7 @@ async function addStudent(e) {
 
   try {
     console.debug("addStudent payload:", body);
-    await postForm(body);
+    await postFormStrict(body);
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
   } catch (err) {
@@ -116,7 +116,7 @@ async function addSchedule(e) {
 
   try {
     console.debug("addSchedule payload:", body);
-    await postForm(body);
+    await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
     loadSchedule();
@@ -135,7 +135,7 @@ async function leave(date, time, teacher, studentCode) {
       date, time, teacher, studentCode
     };
     console.debug("leave payload:", payload);
-    await postForm(payload);
+    await postFormStrict(payload);
     alert("บันทึกการลาแล้ว ✅");
     loadSchedule();
   } catch (err) {
@@ -159,31 +159,30 @@ async function postForm(data) {
   for (const [k, v] of Object.entries(data)) {
     form.append(k, v == null ? "" : String(v));
   }
-  try {
-    const res = await fetch(API_URL, { method: "POST", body: form });
-    const text = await res.text().catch(() => "");
-    if (!res.ok) {
-      const snippet = text ? ` - ${text.slice(0, 200)}` : "";
-      throw new Error(`HTTP ${res.status}${snippet}`);
-    }
-    try { return JSON.parse(text); } catch (_) { return text; }
-  } catch (err) {
-    console.warn("Primary POST failed, trying GET fallback", err);
-    // Fallback 1: try GET with query params (works if server handles doGet)
+  const res = await fetch(API_URL, { method: "POST", body: form });
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    const snippet = text ? ` - ${text.slice(0, 200)}` : "";
+    throw new Error(`HTTP ${res.status}${snippet}`);
+  }
+  try { return JSON.parse(text); } catch (_) { return text; }
+}
+
+// Strict write: require readable JSON ok:true; no opaque fallbacks
+async function postFormStrict(data) {
+  const res = await postForm(data);
+  if (typeof res === 'string') {
+    // Try to parse if server returned text JSON-like
     try {
-      const url = `${API_URL}?${form.toString()}`;
-      const res2 = await fetch(url, { cache: "no-store" });
-      const text2 = await res2.text().catch(() => "");
-      if (!res2.ok) {
-        const snippet2 = text2 ? ` - ${text2.slice(0, 200)}` : "";
-        throw new Error(`HTTP ${res2.status}${snippet2}`);
-      }
-      try { return JSON.parse(text2); } catch (_) { return text2; }
-    } catch (err2) {
-      console.warn("GET fallback failed, trying no-cors POST as last resort", err2);
-      // Fallback 2: no-cors POST (opaque). We cannot read response, assume success.
-      await fetch(API_URL, { method: "POST", body: form, mode: "no-cors" });
-      return { opaque: true };
+      const parsed = JSON.parse(res);
+      if (parsed && parsed.ok) return parsed;
+      throw new Error(parsed && parsed.error ? parsed.error : 'Unexpected response');
+    } catch (_) {
+      throw new Error('No JSON response from server');
     }
   }
+  if (!res || res.ok === false) {
+    throw new Error((res && res.error) || 'Server returned failure');
+  }
+  return res;
 }
