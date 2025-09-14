@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbyUeoWYVo42aenxEVaR1ajp8iY_9n42qBFzo-oO_RhweZxYJ4AAxcXIbHcakhXN_T-e/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzCL-qUV1YZDfzSn8uF-QeRT1biXoIq8fwvnSCIszACYhWtcOInYbeotD1wFb-bSOXu/exec";
 
 // ------------------
 // Theme: Light/Dark
@@ -98,6 +98,8 @@ async function addStudent(e) {
     await postFormStrict(body);
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
+    // Refresh weekly schedule to reflect newly generated sessions
+    loadWeekSchedule();
   } catch (err) {
     console.error("addStudent error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -122,7 +124,7 @@ async function addSchedule(e) {
     await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
-    loadWeeklyGrid();
+    loadWeekSchedule();
   } catch (err) {
     console.error("addSchedule error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -140,7 +142,7 @@ async function leave(date, time, teacher, studentCode) {
     console.debug("leave payload:", payload);
     await postFormStrict(payload);
     alert("บันทึกการลาแล้ว ✅");
-    loadWeeklyGrid();
+    loadWeekSchedule();
   } catch (err) {
     console.error("leave error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -152,46 +154,94 @@ async function leave(date, time, teacher, studentCode) {
 document.getElementById("addStudentForm").addEventListener("submit", addStudent);
 
 // โหลดตารางครั้งแรก
-loadWeeklyGrid();
+initScheduleView();
 
-// แสดงตาราง จันทร์-ศุกร์ ตามเวลาที่เด็กลงไว้ จาก students sheet
-async function loadWeeklyGrid() {
+// แสดงตาราง จันทร์-อาทิตย์ จาก schedule sheet พร้อมปุ่มลา
+async function loadWeekSchedule() {
   try {
-    const res = await fetch(API_URL + "?sheet=students", { cache: "no-store" });
-    const students = await res.json();
+    const [scheduleRes, studentsRes] = await Promise.all([
+      fetch(API_URL + "?sheet=schedule", { cache: "no-store" }),
+      fetch(API_URL + "?sheet=students", { cache: "no-store" })
+    ]);
+    const [items, students] = await Promise.all([
+      scheduleRes.json(),
+      studentsRes.json()
+    ]);
+    const nameByCode = new Map(students.map(s => [String(s.Code), String(s.Name || '')]));
     const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     const dayTH = { Mon:"จันทร์", Tue:"อังคาร", Wed:"พุธ", Thu:"พฤหัส", Fri:"ศุกร์", Sat:"เสาร์", Sun:"อาทิตย์" };
 
-    const timesSet = new Set();
-    students.forEach(s => {
-      if (days.includes(s.DayOfWeek) && s.Time) timesSet.add(s.Time);
-    });
-    const times = Array.from(timesSet).sort();
+    // Determine view mode
+    const mode = document.getElementById('viewMode')?.value || 'week';
+    const now = new Date();
+    const start = startOfWeekMon(now);
+    const end = addDays(start, 6);
 
-    if (times.length === 0) {
-      document.getElementById("schedule").innerHTML = "<p>ยังไม่มีข้อมูลตาราง</p>";
-      return;
+    let rows = items
+      .map(r => ({...r, _date: parseDate(r.Date)}))
+      .filter(r => r._date);
+
+    if (mode === 'week') {
+      rows = rows.filter(r => r._date >= start && r._date <= end);
+    } else {
+      // all upcoming: today or future only
+      const today = new Date(); today.setHours(0,0,0,0);
+      rows = rows.filter(r => r._date >= today);
     }
 
+    rows.sort((a,b) => (a._date - b._date) || String(a.Time).localeCompare(String(b.Time)));
+
     let html = "<table>";
-    html += "<tr><th>Time</th>" + days.map(d => `<th>${dayTH[d]}</th>`).join("") + "</tr>";
-
-    times.forEach(t => {
-      html += `<tr><th>${t}</th>`;
-      days.forEach(d => {
-        const entries = students.filter(s => s.DayOfWeek === d && s.Time === t);
-        const cell = entries.map(s => `${s.ID || s.Code} - ${s.Teacher || ''}`).join('<br/>');
-        html += `<td>${cell || ''}</td>`;
-      });
-      html += "</tr>";
-    });
-
+    html += "<tr><th>วัน</th><th>วันที่</th><th>เวลา</th><th>Student Code</th><th>Student Name</th><th>ครูผู้สอน</th><th>Status</th><th>Action</th></tr>";
+    for (const r of rows) {
+      const d = r._date;
+      const dow = days[d.getDay() === 0 ? 6 : d.getDay()-1];
+      const name = nameByCode.get(String(r.StudentCode)) || '';
+      html += `
+        <tr>
+          <td>${dayTH[dow]}</td>
+          <td>${r.Date}</td>
+          <td>${r.Time}</td>
+          <td>${r.StudentCode}</td>
+          <td>${name}</td>
+          <td>${r.Teacher}</td>
+          <td>${r.Status || ''}</td>
+          <td><button onclick="leave('${r.Date}','${r.Time}','${r.Teacher}','${r.StudentCode}')">ลา</button></td>
+        </tr>`;
+    }
     html += "</table>";
     document.getElementById("schedule").innerHTML = html;
   } catch (err) {
     document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
     console.error(err);
   }
+}
+
+// date utils on client
+function startOfWeekMon(d) {
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = date.getDay(); // 0..6, Sun=0
+  const diff = (day === 0 ? -6 : 1 - day); // move to Monday
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  x.setHours(23,59,59,999);
+  return x;
+}
+function parseDate(str) {
+  const [y,m,dd] = String(str).split('-').map(Number);
+  if (!y || !m || !dd) return null;
+  return new Date(y, m-1, dd);
+}
+
+function initScheduleView() {
+  const sel = document.getElementById('viewMode');
+  if (sel) sel.addEventListener('change', () => loadWeekSchedule());
+  loadWeekSchedule();
 }
 
 // ---------- Helpers ----------

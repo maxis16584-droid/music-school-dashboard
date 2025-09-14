@@ -37,6 +37,14 @@ h1, h2 {
   overflow-x: auto;
 }
 
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0 6px 0;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
