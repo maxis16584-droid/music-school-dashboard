@@ -27,7 +27,7 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: var(--bg);
   margin: 20px;
   color: var(--text);
@@ -107,8 +107,8 @@ form button {
 /* Theme toggle button */
 .theme-toggle {
   position: fixed;
-  top: 96px; /* placed below the logo */
-  right: 16px;
+  top: 16px;
+  left: 16px; /* move to top-left */
   padding: 6px 10px;
   background: var(--accent);
   color: var(--btn-text);
@@ -119,13 +119,11 @@ form button {
 
 /* Brand logo at top-right */
 .brand-logo {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  width: 84px;
+  display: block;
+  margin: 30px auto 8px auto; /* center */
+  width: 180px; /* larger */
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
 }
 
 /* Environment warning banner */

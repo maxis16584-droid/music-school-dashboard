@@ -12,7 +12,7 @@ function applyTheme(theme) {
   root.classList.toggle("dark", isDark);
   try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
   const btn = document.getElementById("themeToggle");
-  if (btn) btn.textContent = isDark ? "☀️ Light" : "🌙 Dark";
+  if (btn) btn.textContent = isDark ? "Light" : "Dark";
 }
 
 function initTheme() {
@@ -268,6 +268,20 @@ function formatTimeCell(val) {
   return s;
 }
 
+// Show Thai weekday with (dd/MM) in current week
+function formatDayWithDate(dayKey, dayTH) {
+  const start = startOfWeekMon(new Date());
+  // Map 3-letter day to offset from Monday start
+  const offsetMap = { Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6 };
+  const offset = offsetMap[dayKey] ?? 0;
+  const d = new Date(start);
+  d.setDate(start.getDate() + offset);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const label = dayTH[dayKey] || dayKey;
+  return `${label} (${dd}/${mm})`;
+}
+
 // Students-only view: list Mon–Sun from students sheet
 async function loadStudentsView() {
   try {
@@ -292,7 +306,7 @@ async function loadStudentsView() {
     for (const r of rows) {
       html += `
         <tr>
-          <td>${dayTH[r.day] || r.day}</td>
+          <td>${formatDayWithDate(r.day, dayTH)}</td>
           <td>${formatTimeCell(r.time)}</td>
           <td>${r.code}</td>
           <td>${r.name}</td>
