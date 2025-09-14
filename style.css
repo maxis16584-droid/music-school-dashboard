@@ -1,23 +1,29 @@
 :root {
-  --bg: #f4f4f4;
-  --text: #333333;
+  /* Brand (light-ish) */
+  --bg: #fffaf3;
+  --text: #1a1a1a;
   --card: #ffffff;
-  --muted: #eeeeee;
-  --border: #cccccc;
-  --shadow: rgba(0, 0, 0, 0.1);
-  --btn-bg: #2e7d32; /* green 700 */
-  --btn-text: #ffffff;
+  --muted: #fff3d6; /* pale amber */
+  --border: #ffd97a;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --accent: #f6a32a; /* logo orange */
+  --accent-2: #ffd84d; /* logo yellow */
+  --btn-bg: var(--accent);
+  --btn-text: #151515;
 }
 
 :root.dark {
-  --bg: #121212;
-  --text: #e6e6e6;
-  --card: #1e1e1e;
-  --muted: #2a2a2a;
-  --border: #3a3a3a;
-  --shadow: rgba(0, 0, 0, 0.4);
-  --btn-bg: #43a047; /* green 600 for contrast on dark */
-  --btn-text: #ffffff;
+  /* Brand (dark) */
+  --bg: #0e0e10;
+  --text: #f5f7fa;
+  --card: #16181d;
+  --muted: #1f232a;
+  --border: #2a2f36;
+  --shadow: rgba(0, 0, 0, 0.45);
+  --accent: #f6a32a;
+  --accent-2: #ffd84d;
+  --btn-bg: var(--accent);
+  --btn-text: #0e0e10;
 }
 
 body {
@@ -30,6 +36,7 @@ body {
 h1, h2 {
   text-align: center;
   margin-bottom: 20px;
+  color: var(--accent);
 }
 
 #schedule {
@@ -61,6 +68,7 @@ th, td {
 
 th {
   background: var(--muted);
+  color: #1a1a1a;
 }
 
 button {
@@ -99,14 +107,25 @@ form button {
 /* Theme toggle button */
 .theme-toggle {
   position: fixed;
-  top: 16px;
+  top: 96px; /* placed below the logo */
   right: 16px;
   padding: 6px 10px;
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--accent);
+  color: var(--btn-text);
+  border: 1px solid transparent;
   border-radius: 6px;
   box-shadow: 0 1px 3px var(--shadow);
+}
+
+/* Brand logo at top-right */
+.brand-logo {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 84px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
 }
 
 /* Environment warning banner */
