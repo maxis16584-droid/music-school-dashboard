@@ -80,15 +80,12 @@ async function addStudent(e) {
   };
 
   try {
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" }
-    });
+    await postForm(body);
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
   } catch (err) {
-    alert("❌ เกิดข้อผิดพลาด");
+    console.error("addStudent error:", err);
+    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
     console.error(err);
   }
 }
@@ -106,16 +103,13 @@ async function addSchedule(e) {
   };
 
   try {
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" }
-    });
+    await postForm(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
     loadSchedule();
   } catch (err) {
-    alert("❌ เกิดข้อผิดพลาด");
+    console.error("addSchedule error:", err);
+    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
     console.error(err);
   }
 }
@@ -123,18 +117,15 @@ async function addSchedule(e) {
 // ฟังก์ชันลา
 async function leave(date, time, teacher, studentCode) {
   try {
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "leave",
-        date, time, teacher, studentCode
-      }),
-      headers: { "Content-Type": "application/json" }
+    await postForm({
+      action: "leave",
+      date, time, teacher, studentCode
     });
     alert("บันทึกการลาแล้ว ✅");
     loadSchedule();
   } catch (err) {
-    alert("❌ เกิดข้อผิดพลาด");
+    console.error("leave error:", err);
+    alert("❌ เกิดข้อผิดพลาด (ตรวจสอบการตั้งค่า Web App/CORS)");
     console.error(err);
   }
 }
@@ -145,3 +136,29 @@ document.getElementById("addScheduleForm").addEventListener("submit", addSchedul
 
 // โหลดตารางครั้งแรก
 loadSchedule();
+
+// ---------- Helpers ----------
+async function postForm(data) {
+  // Use URL-encoded form to avoid CORS preflight with Apps Script
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(data)) {
+    form.append(k, v == null ? "" : String(v));
+  }
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: form
+  });
+  // Even if server returns non-JSON, this prevents silent failures
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let text;
+  try {
+    text = await res.text();
+  } catch (_) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    return text;
+  }
+}
