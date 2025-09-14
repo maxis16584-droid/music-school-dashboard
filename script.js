@@ -33,6 +33,17 @@ document.getElementById("themeToggle")?.addEventListener("click", () => {
 // Initialize theme ASAP
 initTheme();
 
+// Warn if running from file:// which often breaks CORS
+(() => {
+  if (window.location.protocol === 'file:') {
+    const el = document.getElementById('envWarning');
+    if (el) {
+      el.hidden = false;
+      el.textContent = 'You are opening this page via file://. Many APIs (like Google Apps Script) reject requests from a null origin. Please run a local server (e.g., VS Code Live Server or: python3 -m http.server) and access via http://localhost.';
+    }
+  }
+})();
+
 // โหลดตารางเรียนจาก schedule sheet
 async function loadSchedule() {
   try {
@@ -148,15 +159,31 @@ async function postForm(data) {
   for (const [k, v] of Object.entries(data)) {
     form.append(k, v == null ? "" : String(v));
   }
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: form
-  });
-  const text = await res.text().catch(() => "");
-  if (!res.ok) {
-    // Surface status + a snippet of response body
-    const snippet = text ? ` - ${text.slice(0, 200)}` : "";
-    throw new Error(`HTTP ${res.status}${snippet}`);
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: form });
+    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      const snippet = text ? ` - ${text.slice(0, 200)}` : "";
+      throw new Error(`HTTP ${res.status}${snippet}`);
+    }
+    try { return JSON.parse(text); } catch (_) { return text; }
+  } catch (err) {
+    console.warn("Primary POST failed, trying GET fallback", err);
+    // Fallback 1: try GET with query params (works if server handles doGet)
+    try {
+      const url = `${API_URL}?${form.toString()}`;
+      const res2 = await fetch(url, { cache: "no-store" });
+      const text2 = await res2.text().catch(() => "");
+      if (!res2.ok) {
+        const snippet2 = text2 ? ` - ${text2.slice(0, 200)}` : "";
+        throw new Error(`HTTP ${res2.status}${snippet2}`);
+      }
+      try { return JSON.parse(text2); } catch (_) { return text2; }
+    } catch (err2) {
+      console.warn("GET fallback failed, trying no-cors POST as last resort", err2);
+      // Fallback 2: no-cors POST (opaque). We cannot read response, assume success.
+      await fetch(API_URL, { method: "POST", body: form, mode: "no-cors" });
+      return { opaque: true };
+    }
   }
-  try { return JSON.parse(text); } catch (_) { return text; }
 }
