@@ -8,12 +8,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <!-- React + ReactDOM + Babel (for JSX in-browser) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body>
   <div id="envWarning" class="env-warning" hidden></div>
   <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">Dark</button>
   <img src="logo.png" alt="Music Corner logo" class="brand-logo" title="Music Corner" />
   <h1>Music School Dashboard</h1>
+
+  <!-- React Weekly Calendar -->
+  <div id="calendar-root" class="calendar-root"></div>
 
   <!-- ตารางแสดง schedule -->
   <div id="schedule">Loading...</div>
@@ -49,5 +56,6 @@
 
 
   <script src="script.js"></script>
+  <script type="text/babel" src="weekly-calendar.jsx"></script>
 </body>
 </html>

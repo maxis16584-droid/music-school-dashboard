@@ -315,6 +315,38 @@ async function loadStudentsView() {
     }
     html += "</table>";
     document.getElementById("schedule").innerHTML = html;
+
+    // Also render the weekly calendar from these students as 1-hour events in the current week
+    try {
+      const start = startOfWeekMon(new Date());
+      const offsetMap = { Sun:6, Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5 };
+      const parseHHMM = (s) => {
+        const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+        return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 0, m: 0 };
+      };
+      const events = rows.map((r, idx) => {
+        const off = offsetMap[r.day] ?? 0;
+        const d = new Date(start);
+        d.setDate(start.getDate() + off);
+        const { h, m } = parseHHMM(r.time);
+        const s = new Date(d); s.setHours(h, m, 0, 0);
+        const e = new Date(s); e.setHours(s.getHours() + 1);
+        return {
+          id: String(idx + 1),
+          title: `${r.code} - ${r.teacher}`,
+          start: s,
+          end: e,
+          color: undefined
+        };
+      });
+      if (window.renderWeeklyCalendar) {
+        window.renderWeeklyCalendar(events);
+      } else {
+        window.__pendingCalendarEvents = events;
+      }
+    } catch (e) {
+      console.warn('Calendar render skipped:', e);
+    }
   } catch (err) {
     document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
     console.error(err);
