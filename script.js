@@ -93,7 +93,8 @@ async function loadSchedule() {
         start,
         end,
         _dateIso: dateIso,
-        _timeHH: timeHH
+        _timeHH: timeHH,
+        _rawTime: String(r.Time || '')
       };
     }).filter(Boolean);
 
@@ -119,7 +120,7 @@ function injectEventsIntoCells(events) {
     if (!cell) return;
     const div = document.createElement('div');
     div.setAttribute('data-injected','1');
-    div.textContent = ev.title;
+    div.textContent = ev._rawTime ? `${ev.title} - ${ev._rawTime}` : ev.title;
     cell.appendChild(div);
   });
 }

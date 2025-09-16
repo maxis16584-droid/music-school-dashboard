@@ -114,7 +114,7 @@ function WeeklyCalendar({
                     >
                       <span className="wc-event-title">{ev.title}</span>
                       <span className="wc-event-time">
-                        {wcHHMM(wcToDate(ev.start))}{ev.end ? `–${wcHHMM(wcToDate(ev.end))}` : ''}
+                        {ev._rawTime || (`${wcHHMM(wcToDate(ev.start))}${ev.end ? '–' + wcHHMM(wcToDate(ev.end)) : ''}`)}
                       </span>
                     </div>
                   ))}
