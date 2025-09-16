@@ -186,8 +186,13 @@ modalForm?.addEventListener('submit', async (e) => {
     const name = document.getElementById('modalName').value.trim();
     const total = parseInt(document.getElementById('modalCourseTotal').value || '0', 10);
     const teacher = document.getElementById('modalTeacher').value;
-    const dateStr = document.getElementById('modalDate').value;
-    const timeSlot = document.getElementById('modalTime').value;
+    const dateStr = (document.getElementById('modalDate').value || '').trim();
+    const timeSlot = (document.getElementById('modalTime').value || '').trim();
+
+    if (!code || !name || !total || !teacher || !dateStr || !timeSlot) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
 
     // Add student (include both time and time_slot for compatibility)
     await postFormStrict({
@@ -201,10 +206,13 @@ modalForm?.addEventListener('submit', async (e) => {
     });
 
     // Add schedule for N consecutive weeks
-    let base = parseDate(dateStr);
+    let base = parseDate(dateStr) || new Date(dateStr);
+    if (!(base instanceof Date) || isNaN(base.getTime())) {
+      throw new Error('รูปแบบวันที่ไม่ถูกต้อง');
+    }
     for (let i = 0; i < total; i++) {
       const d = new Date(base);
-      d.setDate(base.getDate() + i * 7);
+      d.setDate(d.getDate() + i * 7);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth()+1).padStart(2,'0');
       const dd = String(d.getDate()).padStart(2,'0');
