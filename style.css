@@ -84,6 +84,8 @@ h1::after{
 .booking.teacher-others{ background:var(--t-others-bg); border-left-color:var(--t-others-border); color:#111827; }
 .booking .leave{ background:var(--accent); color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
 .booking .leave:hover{ filter:brightness(1.05); }
+.booking .move{ background:#111827; color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
+.booking .move:hover{ filter:brightness(1.05); }
 
 /* Modal */
 .modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:4000; }
@@ -128,9 +130,7 @@ h1::after{
 .add-btn{ background:#10b981; color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
 .slot-bookings{ margin-top:4px; }
 
-/* Booking pop menu */
-.booking-menu{ position:absolute; background:#fff; border:1px solid var(--grid); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15); padding:6px; display:flex; gap:6px; z-index:2000; }
-.booking-menu button{ background:#111827; color:#fff; border:0; border-radius:6px; padding:4px 6px; font-size:12px; cursor:pointer; }
+/* Removed +1/-1 pop menu */
 
 /* Tooltip */
 .tooltip{ position:absolute; background:#111827; color:#fff; padding:6px 8px; border-radius:6px; font-size:12px; pointer-events:none; z-index:2000; }
@@ -141,4 +141,10 @@ h1::after{
 /* Center the modals */
 #leaveModal.modal,
 #addModal.modal,
-#notesModal.modal{ place-items:center; padding:16px; }
+#notesModal.modal,
+#moveModal.modal{ place-items:center; padding:16px; }
+
+/* Toast */
+.toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+  background:#111827; color:#fff; padding:10px 14px; border-radius:10px; font-size:13px; box-shadow:0 8px 20px rgba(0,0,0,0.2); z-index:5000; opacity:0; transition:opacity .15s ease, transform .15s ease; }
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }

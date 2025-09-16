@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbwo976Quil2jt7jRj2VjfGr0lbxXhyqbGsfU5oC3AsaphHUK8ZI_S0__5ImII1sEF8/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwX7wQwudiOfmqI4Zbg9w8FURuq4A7VD022bukosW2vwHOciYWp3Uujje1jB4A8B55AYA/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
@@ -136,6 +136,7 @@ modalForm?.addEventListener('submit', async (e) => {
 
     await postFormStrict({ action:'addBooking', studentCode: code, studentName: name, teacher, courseHours: total, date: dateStr, time: timeStr });
     modalEl.hidden = true; modalForm.reset();
+    showToast('บันทึกสำเร็จ');
     await loadSchedule();
   } catch (err) { alert(`❌ Error: ${err?.message || err}`); }
 });
@@ -314,45 +315,11 @@ leaveConfirmBtn?.addEventListener('click', async ()=>{ if (leaveModal) leaveModa
 leaveCancelBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 leaveCloseBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 
-let _menuDocClickHandler = null;
-let _menuEscHandler = null;
-function showBookingMenu(x,y,onChoose){
-  // Close existing menu if any
-  closeBookingMenu();
-  const menu = document.createElement('div');
-  menu.className = 'booking-menu';
-  const plus = document.createElement('button'); plus.textContent = '+1 hour';
-  const minus = document.createElement('button'); minus.textContent = '-1 hour';
-  plus.addEventListener('click', ()=>{ document.body.removeChild(menu); onChoose(+1); });
-  minus.addEventListener('click', ()=>{ document.body.removeChild(menu); onChoose(-1); });
-  menu.appendChild(minus); menu.appendChild(plus);
-  document.body.appendChild(menu);
-  menu.style.left = (x+10)+'px'; menu.style.top = (y+10)+'px';
-  menu.addEventListener('click', (e)=> e.stopPropagation());
-
-  // Track active menu and bind outside handlers
-  window._activeBookingMenu = menu;
-  _menuDocClickHandler = (e)=>{ closeBookingMenu(); };
-  _menuEscHandler = (e)=>{ if (e.key === 'Escape') { closeBookingMenu(); } };
-  setTimeout(()=>{ // defer to avoid accidental close from same tick
-    document.addEventListener('click', _menuDocClickHandler, true);
-    document.addEventListener('keydown', _menuEscHandler, true);
-  },0);
-}
-function shiftHour(timeHH, delta){
-  const m = String(timeHH).match(/^(\d{1,2}):(\d{2})$/); if (!m) return '';
-  let h = Number(m[1]) + delta; if (h<0||h>23) return '';
-  return `${String(h).padStart(2,'0')}:${m[2]}`;
-}
+// removed +1/-1 booking pop menu
+// removed helper for +1/-1
 function positionTooltip(el,x,y){ el.style.left = (x+12)+'px'; el.style.top = (y+12)+'px'; }
 
-function closeBookingMenu(){
-  const m = window._activeBookingMenu;
-  if (m && m.parentNode) { try { m.parentNode.removeChild(m); } catch {} }
-  window._activeBookingMenu = null;
-  if (_menuDocClickHandler) { document.removeEventListener('click', _menuDocClickHandler, true); _menuDocClickHandler = null; }
-  if (_menuEscHandler) { document.removeEventListener('keydown', _menuEscHandler, true); _menuEscHandler = null; }
-}
+// removed closeBookingMenu
 
 // Keep reference to student info for tooltip
 let _studentsCache = null;
@@ -427,6 +394,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
   el.className = `booking teacher-${tKey}`;
   el.innerHTML = `<span>(${code}, ${name || ''}, ${teacher})</span>`;
 
+  // Leave button
   const btn = document.createElement('button');
   btn.className = 'leave';
   btn.textContent = 'Leave';
@@ -435,29 +403,30 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
     openLeaveConfirm(async () => {
       btn.disabled = true;
       try {
-        await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code });
+        // Optimistic: remove the booking box immediately
+        const parent = el.parentNode; if (parent) parent.removeChild(el);
+        const res = await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code });
+        showToast('ทำการลาแล้ว ลบกล่อง และเพิ่มรอบใหม่แล้ว');
         await loadSchedule();
       } catch (err) {
         btn.disabled = false;
+        // Restore element if needed
+        try { const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`); if (cell) cell.appendChild(el); } catch {}
         alert(`❌ Leave error: ${err?.message || err}`);
       }
     });
   });
   el.appendChild(btn);
 
-  el.addEventListener('click', (ev) => {
+  // Move button
+  const moveBtn = document.createElement('button');
+  moveBtn.className = 'move';
+  moveBtn.textContent = 'Move';
+  moveBtn.addEventListener('click', (ev) => {
     ev.stopPropagation();
-    showBookingMenu(ev.clientX, ev.clientY, async (delta) => {
-      const newStart = shiftHour(timeHH, delta);
-      if (!newStart) return;
-      try {
-        await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime: newStart, teacher, studentCode: code });
-        await loadSchedule();
-      } catch (err) {
-        alert('Server does not support moveBooking yet. Please update Apps Script.');
-      }
-    });
+    openMoveModal({ dateIso, timeHH, rawTime, code, teacher, name });
   });
+  el.appendChild(moveBtn);
 
   // Tooltip
   el.addEventListener('mouseenter', (ev) => {
@@ -476,4 +445,63 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
   el.addEventListener('mouseleave', () => { if (el._tip) { el._tip.remove(); el._tip = null; } });
 
   return el;
+}
+
+// ---------- Move modal logic ----------
+const moveModal = document.getElementById('moveModal');
+const moveForm = document.getElementById('moveForm');
+const moveClose = document.getElementById('moveClose');
+const moveCode = document.getElementById('moveCode');
+const moveTeacher = document.getElementById('moveTeacher');
+const moveDate = document.getElementById('moveDate');
+const moveTime = document.getElementById('moveTime');
+const moveRawTime = document.getElementById('moveRawTime');
+let _moveCtx = null;
+
+function openMoveModal(ctx){
+  _moveCtx = ctx;
+  if (!moveModal) return;
+  moveCode.value = ctx.code;
+  moveTeacher.value = ctx.teacher;
+  moveDate.value = ctx.dateIso;
+  moveTime.value = (ctx.timeHH || '00:00');
+  moveRawTime.value = ctx.rawTime;
+  moveModal.hidden = false;
+}
+function closeMoveModal(){ if (moveModal) moveModal.hidden = true; _moveCtx = null; }
+moveClose?.addEventListener('click', closeMoveModal);
+moveModal?.addEventListener('click', (e)=>{ if (e.target === moveModal) closeMoveModal(); });
+moveForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!_moveCtx) return closeMoveModal();
+  const newTime = moveTime.value;
+  if (!newTime) { alert('กรุณาเลือกเวลาใหม่'); return; }
+  const { dateIso, rawTime, teacher, code } = _moveCtx;
+  try {
+    // Optimistic: remove old, add placeholder at new slot
+    const oldCell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${_moveCtx.timeHH}"] .slot-bookings`);
+    if (oldCell) {
+      const node = [...oldCell.children].find(n => n.classList.contains('booking') && n.textContent.includes(code) && n.textContent.includes(teacher));
+      if (node) oldCell.removeChild(node);
+    }
+    await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime, teacher, studentCode: code });
+    showToast('ย้ายเวลาเรียบร้อย');
+    closeMoveModal();
+    await loadSchedule();
+  } catch (err) {
+    alert(`❌ Move error: ${err?.message || err}`);
+  }
+});
+
+// ---------- Toast ----------
+function showToast(message){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = message;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{ el.classList.add('show'); });
+  setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=>{ try{ el.remove(); }catch{} }, 200);
+  }, 2000);
 }

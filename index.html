@@ -85,6 +85,28 @@
     </div>
   </div>
 
+  <!-- Move Booking modal -->
+  <div id="moveModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Move Booking</span>
+        <button id="moveClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <form id="moveForm" class="modal-body">
+        <div class="grid two">
+          <input type="text" id="moveCode" placeholder="Student Code" readonly />
+          <input type="text" id="moveTeacher" placeholder="Teacher" readonly />
+        </div>
+        <div class="grid two">
+          <input type="text" id="moveDate" placeholder="Date" readonly />
+          <input type="time" id="moveTime" placeholder="New Time" step="3600" required />
+        </div>
+        <input type="hidden" id="moveRawTime" />
+        <button type="submit" class="btn-primary" style="width:100%">Confirm Move</button>
+      </form>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
