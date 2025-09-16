@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'PUT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxRJOcKdTcv8Sae6HSuUTcySlNlZu-UmDE6DjvuSKuBhyZAFk_I-0jsibJnTyuAo-p3/exec';
 
 // Locale/Timezone for display
 const LOCALE = 'th-TH-u-ca-buddhist';
@@ -144,6 +144,7 @@ async function postFormStrict(data) {
 }
 
 // ---------- Init ----------
-renderCalendar();
-loadSchedule();
-
+document.addEventListener('DOMContentLoaded', () => {
+  try { renderCalendar(); } catch (e) { console.error('renderCalendar error', e); }
+  try { loadSchedule(); } catch (e) { console.error('loadSchedule error', e); }
+});
