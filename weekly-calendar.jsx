@@ -110,7 +110,7 @@ function WeeklyCalendar({
                   data-hour={h}
                   data-date={dateIso}
                   data-time={timeHH}
-                  onClick={() => onCellClick && onCellClick({ date: dayDate, hour: h })}
+                  onClick={() => onCellClick && onCellClick({ date: dayDate, time: timeHH })}
                 >
                   {cellEvents.map((ev) => (
                     <div

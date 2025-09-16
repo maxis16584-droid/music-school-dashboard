@@ -234,13 +234,13 @@ async function leave(date, time, teacher, studentCode) {
 const modalEl = document.getElementById('addModal');
 const modalForm = document.getElementById('modalForm');
 const modalClose = document.getElementById('modalClose');
-function openAddModal(date, hour) {
+function openAddModal(date, timeHH) {
   if (!modalEl) return;
   const d = new Date(date);
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const yyyy = d.getFullYear();
-  const start = String(hour).padStart(2,'0') + ':00';
+  const start = String(timeHH || '').trim() || '13:00';
   document.getElementById('modalDate').value = `${yyyy}-${mm}-${dd}`;
   document.getElementById('modalTime').value = `${start}`;
   // Show Buddhist year display for user
@@ -261,7 +261,7 @@ modalEl?.addEventListener('click', (e) => {
 });
 
 // Expose handler for calendar cell click
-window.__onCalendarCellClick = ({date, hour}) => openAddModal(date, hour);
+window.__onCalendarCellClick = ({date, time}) => openAddModal(date, time);
 
 // Submit from modal: add booking (backend handles student creation + repeats)
 modalForm?.addEventListener('submit', async (e) => {
