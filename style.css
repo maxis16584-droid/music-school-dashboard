@@ -74,43 +74,7 @@ h1, h2 {
   padding: 12px;
 }
 
-/* Floating Add Student panel */
-.floating-form {
-  position: fixed;
-  top: 70px;
-  right: 16px;
-  width: 320px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 28px var(--shadow);
-  z-index: 1000;
-}
-.floating-form__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--muted);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-}
-.floating-form__title { font-weight: 700; color: #1a1a1a; }
-.floating-form__close {
-  background: transparent;
-  border: 0;
-  font-size: 20px;
-  cursor: pointer;
-  color: var(--text);
-}
-.floating-form__body { padding: 12px; display: grid; gap: 8px; }
-.floating-form__body input, .floating-form__body select {
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  width: 100%;
-}
+/* Remove old floating form (replaced by modal) */
 .floating-form__submit {
   background: linear-gradient(180deg, var(--accent-2), var(--accent));
   color: #151515;
@@ -276,3 +240,12 @@ form button {
   margin-bottom: 10px;
   z-index: 1000;
 }
+/* Modal for adding from calendar */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: grid; place-items: start end; padding: 70px 16px 16px 16px; z-index: 1000; }
+.modal-card { width: 340px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 28px var(--shadow); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--muted); border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.modal-title { font-weight: 700; color: #1a1a1a; }
+.modal-close { background: transparent; border: 0; font-size: 20px; cursor: pointer; color: var(--text); }
+.modal-body { padding: 12px; display: grid; gap: 8px; }
+.modal-body input, .modal-body select { padding: 8px; border: 1px solid var(--border); border-radius: 8px; width: 100%; }
+.grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

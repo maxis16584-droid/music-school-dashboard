@@ -17,44 +17,41 @@
   <div id="envWarning" class="env-warning" hidden></div>
   <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">Dark</button>
   <img src="logo.png" alt="Music Corner logo" class="brand-logo" title="Music Corner" />
-  <button id="addStudentTop" class="primary-action" aria-label="Add Student">Add Student</button>
   <h1>Music School Dashboard</h1>
 
   <!-- React Weekly Calendar -->
   <div id="calendar-root" class="calendar-root"></div>
 
-  <!-- ฟอร์มเพิ่มนักเรียน (ลอยมุมขวาบน) -->
-  <div id="addStudentPanel" class="floating-form" hidden>
-    <div class="floating-form__header">
-      <span class="floating-form__title">Add Student</span>
-      <button type="button" id="closeAddStudent" class="floating-form__close" aria-label="Close">×</button>
+  <!-- Modal Add Student (open by clicking a calendar cell) -->
+  <div id="addModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Add Student</span>
+        <button id="modalClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <form id="modalForm" class="modal-body">
+        <div class="grid two">
+          <input type="text" id="modalCode" placeholder="Student Code (M1, A2...)" required />
+          <input type="text" id="modalName" placeholder="Student Name" required />
+        </div>
+        <div class="grid two">
+          <input type="number" id="modalCourseTotal" placeholder="Course Total (4,8,20)" required />
+          <select id="modalTeacher" required>
+            <option value="" disabled selected>เลือกครูผู้สอน</option>
+            <option value="พี่โทน">พี่โทน</option>
+            <option value="พี่หนึ่ง">พี่หนึ่ง</option>
+            <option value="พี่เอก">พี่เอก</option>
+            <option value="พี่บอย">พี่บอย</option>
+            <option value="Others">Others</option>
+          </select>
+        </div>
+        <div class="grid two">
+          <input type="text" id="modalDate" placeholder="Date" readonly />
+          <input type="text" id="modalTime" placeholder="Time (HH:mm - HH:mm)" readonly />
+        </div>
+        <button type="submit" class="floating-form__submit" style="width:100%">Save</button>
+      </form>
     </div>
-    <form id="addStudentForm" class="floating-form__body">
-      <input type="text" id="studentId" placeholder="Student ID (เช่น 001)" required />
-      <input type="text" id="studentCode" placeholder="Student Code (M1,A2...)" required />
-      <input type="text" id="studentName" placeholder="Student Name" required />
-      <input type="number" id="courseTotal" placeholder="Total Courses (4,8,20)" required />
-      <select id="weekday" required>
-        <option value="" disabled selected>เลือกวันเรียน</option>
-        <option value="Mon">ทุกวันจันทร์</option>
-        <option value="Tue">ทุกวันอังคาร</option>
-        <option value="Wed">ทุกวันพุธ</option>
-        <option value="Thu">ทุกวันพฤหัสบดี</option>
-        <option value="Fri">ทุกวันศุกร์</option>
-        <option value="Sat">ทุกวันเสาร์</option>
-        <option value="Sun">ทุกวันอาทิตย์</option>
-      </select>
-    <input type="text" id="weeklyTime" placeholder="เวลา (เช่น 13:00 - 14:00)" required />
-      <select id="teacherStudent" required>
-        <option value="" disabled selected>เลือกครูผู้สอน</option>
-        <option value="พี่โทน">พี่โทน</option>
-        <option value="พี่หนึ่ง">พี่หนึ่ง</option>
-        <option value="พี่เอก">พี่เอก</option>
-        <option value="พี่บอย">พี่บอย</option>
-        <option value="Others">Others</option>
-      </select>
-      <button type="submit" class="floating-form__submit">Add Student</button>
-    </form>
   </div>
 
 

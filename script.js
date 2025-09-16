@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbyGnSyNfL7c9l_sFAbKXZTonlDtefhfqPqlreUMbj2tLyi0hMJk26PU05F8v3swNVoM/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyrjiLDibl5wcPVp6Sbd2DaeO_Z-CyPftDMNIaH0FQdqgi5-mpiw5XDqn550l3QbFrG/exec";
 
 // ------------------
 // Theme: Light/Dark
@@ -152,17 +152,91 @@ async function leave(date, time, teacher, studentCode) {
   }
 }
 
-// ผูก event กับ form
-document.getElementById("addStudentForm").addEventListener("submit", addStudent);
-// Top-right primary button toggles the floating form
-document.getElementById("addStudentTop")?.addEventListener("click", () => {
-  const panel = document.getElementById("addStudentPanel");
-  if (panel) panel.hidden = !panel.hidden;
+// Modal controls for adding from calendar
+const modalEl = document.getElementById('addModal');
+const modalForm = document.getElementById('modalForm');
+const modalClose = document.getElementById('modalClose');
+function openAddModal(date, hour) {
+  if (!modalEl) return;
+  const d = new Date(date);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  const start = String(hour).padStart(2,'0') + ':00';
+  const end = String((hour+1)).padStart(2,'0') + ':00';
+  document.getElementById('modalDate').value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById('modalTime').value = `${start} - ${end}`;
+  modalEl.hidden = false;
+}
+modalClose?.addEventListener('click', ()=> modalEl.hidden = true);
+
+// Expose handler for calendar cell click
+window.__onCalendarCellClick = ({date, hour}) => openAddModal(date, hour);
+
+// Submit from modal: add student + schedule
+modalForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    // Fetch students to compute next ID
+    const studentsRes = await fetch(API_URL + '?sheet=students', { cache: 'no-store' });
+    const students = await studentsRes.json();
+    const nextId = computeNextId(students);
+
+    const code = document.getElementById('modalCode').value.trim();
+    const name = document.getElementById('modalName').value.trim();
+    const total = parseInt(document.getElementById('modalCourseTotal').value || '0', 10);
+    const teacher = document.getElementById('modalTeacher').value;
+    const dateStr = document.getElementById('modalDate').value;
+    const timeSlot = document.getElementById('modalTime').value;
+
+    // Add student (include both time and time_slot for compatibility)
+    await postFormStrict({
+      action: 'addStudent',
+      id: String(nextId),
+      code,
+      name,
+      course_total: total,
+      time: timeSlot,
+      time_slot: timeSlot
+    });
+
+    // Add schedule for N consecutive weeks
+    let base = parseDate(dateStr);
+    for (let i = 0; i < total; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i * 7);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      const dateISO = `${yyyy}-${mm}-${dd}`;
+      await postFormStrict({
+        action: 'addSchedule',
+        date: dateISO,
+        time: timeSlot,
+        teacher,
+        studentCode: code
+      });
+    }
+
+    modalEl.hidden = true;
+    modalForm.reset();
+    renderCalendarFromAPI();
+    alert('เพิ่มนักเรียนและตารางเรียนเรียบร้อย ✅');
+  } catch (err) {
+    console.error('modal submit error:', err);
+    alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
+  }
 });
-document.getElementById("closeAddStudent")?.addEventListener("click", () => {
-  const panel = document.getElementById("addStudentPanel");
-  if (panel) panel.hidden = true;
-});
+
+function computeNextId(students) {
+  let max = 0;
+  (Array.isArray(students) ? students : []).forEach(s => {
+    const n = parseInt(String(s.ID || '').replace(/\D/g,''), 10);
+    if (!isNaN(n)) max = Math.max(max, n);
+  });
+  const next = max + 1;
+  return String(next).padStart(3,'0');
+}
 
 // First load: calendar only
 renderCalendarFromAPI();

@@ -22,6 +22,7 @@ function WeeklyCalendar({
   endHour = 20,
   onEventClick,
   onWeekChange,
+  onCellClick,
 }) {
   const [weekStart, setWeekStart] = useState(() => wcStartOfWeekMonday(initialDate));
   const days = useMemo(() => [...Array(7)].map((_, i) => wcAddDays(weekStart, i)), [weekStart]);
@@ -86,18 +87,18 @@ function WeeklyCalendar({
         {hours.map((h) => (
           <React.Fragment key={h}>
             <div className="wc-hour">{String(h).padStart(2, '0')}:00</div>
-            {days.map((_, dayIdx) => {
+            {days.map((dayDate, dayIdx) => {
               const key = `${dayIdx}-${h}`;
               const cellEvents = eventsByDayHour.get(key) || [];
               return (
-                <div key={key} className="wc-cell" data-hour={h}>
+                <div key={key} className="wc-cell" data-hour={h} onClick={() => onCellClick && onCellClick({ date: dayDate, hour: h })}>
                   {cellEvents.map((ev) => (
                     <div
                       key={ev.id}
                       className="wc-event"
                       title={`${ev.title}\n${wcHHMM(wcToDate(ev.start))}${ev.end ? ' – ' + wcHHMM(wcToDate(ev.end)) : ''}`}
                       style={{ background: ev.color || 'var(--wc-event)' }}
-                      onClick={() => onEventClick && onEventClick(ev)}
+                      onClick={(e) => { e.stopPropagation(); onEventClick && onEventClick(ev); }}
                     >
                       <span className="wc-event-title">{ev.title}</span>
                       <span className="wc-event-time">
@@ -120,7 +121,7 @@ window.renderWeeklyCalendar = function(events, opts = {}) {
   const rootEl = document.getElementById('calendar-root');
   if (!rootEl) return;
   const root = (rootEl.__root ||= ReactDOM.createRoot(rootEl));
-  root.render(<WeeklyCalendar events={events} onEventClick={(ev)=>console.log('Event', ev)} {...opts} />);
+  root.render(<WeeklyCalendar events={events} onEventClick={(ev)=>console.log('Event', ev)} onCellClick={window.__onCalendarCellClick} {...opts} />);
 };
 
 // If there were pending events queued before this script loaded
