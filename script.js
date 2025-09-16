@@ -50,7 +50,7 @@ function renderCalendar() {
   </div>`;
 
   html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
-  days.forEach(d => { html += `<th>${gregLabel(d)}</th>`; });
+  days.forEach(d => { html += `<th class="dow-${d.getDay()}">${gregLabel(d)}</th>`; });
   html += '</tr></thead><tbody>';
 
   for (let h = START_HOUR; h <= END_HOUR; h++) {
@@ -59,7 +59,7 @@ function renderCalendar() {
     days.forEach(d => {
       const dateIso = ymd(d);
       const timeHH = `${String(h).padStart(2,'0')}:00`;
-      html += `<td class="cal-cell" data-date="${dateIso}" data-time="${timeHH}">`
+      html += `<td class="cal-cell dow-${d.getDay()}" data-date="${dateIso}" data-time="${timeHH}">`
            +  `<div class="cell-actions"><button class="add-btn" data-date="${dateIso}" data-time="${timeHH}">+ Add</button></div>`
            +  `<div class="slot-bookings"></div>`
            +  `</td>`;
@@ -190,10 +190,18 @@ async function loadSchedule() {
     }
 
     // Render only events within current visible week
+    // Build a quick map for cells to speed up placement
+    const cellMap = new Map();
+    document.querySelectorAll('.cal-cell').forEach(td => {
+      const key = `${td.getAttribute('data-date')}|${td.getAttribute('data-time')}`;
+      const box = td.querySelector('.slot-bookings');
+      if (box) cellMap.set(key, box);
+    });
+
     normalized
       .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
       .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
-        const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
+        const cell = cellMap.get(`${dateIso}|${timeHH}`);
         if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
         const el = document.createElement('div');
         el.className = 'booking';
@@ -334,6 +342,8 @@ leaveCancelBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidde
 leaveCloseBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 
 function showBookingMenu(x,y,onChoose){
+  // Close any existing menu
+  document.querySelectorAll('.booking-menu').forEach(m => m.remove());
   const menu = document.createElement('div');
   menu.className = 'booking-menu';
   const plus = document.createElement('button'); plus.textContent = '+1 hour';
@@ -343,6 +353,8 @@ function showBookingMenu(x,y,onChoose){
   menu.appendChild(minus); menu.appendChild(plus);
   document.body.appendChild(menu);
   menu.style.left = (x+10)+'px'; menu.style.top = (y+10)+'px';
+  const close = (ev)=>{ if (!menu.contains(ev.target)) { menu.remove(); window.removeEventListener('click', close, true);} };
+  setTimeout(()=> window.addEventListener('click', close, true), 0);
 }
 function shiftHour(timeHH, delta){
   const m = String(timeHH).match(/^(\d{1,2}):(\d{2})$/); if (!m) return '';
@@ -362,4 +374,15 @@ function getStudentInfo(code){
 document.addEventListener('DOMContentLoaded', () => {
   try { renderCalendar(); } catch (e) { console.error('renderCalendar error', e); }
   try { loadSchedule(); } catch (e) { console.error('loadSchedule error', e); }
+  // Notes panel wiring
+  const notesBtn = document.getElementById('notesBtn');
+  const notesModal = document.getElementById('notesModal');
+  const notesClose = document.getElementById('notesClose');
+  const notesSave = document.getElementById('notesSave');
+  const notesArea = document.getElementById('notesArea');
+  const openNotes = ()=>{ if (!notesModal) return; try { notesArea.value = localStorage.getItem('notes') || ''; } catch(_){} notesModal.hidden = false; };
+  notesBtn?.addEventListener('click', openNotes);
+  notesClose?.addEventListener('click', ()=> notesModal.hidden = true);
+  notesModal?.addEventListener('click', (e)=>{ if (e.target === notesModal) notesModal.hidden = true; });
+  notesSave?.addEventListener('click', ()=>{ try { localStorage.setItem('notes', notesArea.value||''); } catch(_){} notesModal.hidden = true; });
 });
