@@ -242,12 +242,17 @@ async function postFormStrict(data) {
   const res = await fetch(API_URL, {
     method:'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    body: form
+    body: form.toString()
   });
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ` - ${text.slice(0,150)}` : ''}`);
-  try { const json = JSON.parse(text); if (json && json.ok !== false) return json; throw new Error(json?.error || 'Server returned failure'); }
-  catch { return text; }
+  try {
+    const json = JSON.parse(text);
+    if (json && (json.ok === true || json.ok === undefined)) return json;
+    throw new Error(json?.error || 'Server returned failure');
+  } catch (e) {
+    throw new Error(`Invalid response from server: ${text.slice(0,150)}`);
+  }
 }
 
 // ---------- Normalizers ----------
