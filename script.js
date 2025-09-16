@@ -348,23 +348,35 @@ async function renderCalendarFromAPI() {
     ]);
     const nameByCode = new Map(students.map(s => [String(s.Code), String(s.Name || '')]));
 
-    const parseHHMM = (s) => {
-      const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-      return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 0, m: 0 };
+    const parseTimeRange = (s) => {
+      const str = String(s || '').trim();
+      // Supports: "13:00" or "13:00 - 14:00"
+      const m = str.match(/^(\d{1,2}):(\d{2})(?:\s*-\s*(\d{1,2}):(\d{2}))?/);
+      if (!m) return { sh: 0, sm: 0, eh: null, em: null };
+      const sh = Number(m[1]);
+      const sm = Number(m[2]);
+      const eh = m[3] != null ? Number(m[3]) : null;
+      const em = m[4] != null ? Number(m[4]) : null;
+      return { sh, sm, eh, em };
     };
-    const toStartDate = (dateStr, timeStr) => {
+    const toDateRange = (dateStr, timeStr) => {
       const d = parseDate(dateStr);
-      if (!d) return null;
-      const { h, m } = parseHHMM(timeStr);
-      const s = new Date(d);
-      s.setHours(h, m, 0, 0);
-      return s;
+      if (!d) return { start: null, end: null };
+      const { sh, sm, eh, em } = parseTimeRange(timeStr);
+      const start = new Date(d);
+      start.setHours(sh, sm, 0, 0);
+      const end = new Date(start);
+      if (eh != null && em != null) {
+        end.setHours(eh, em, 0, 0);
+      } else {
+        end.setHours(start.getHours() + 1, start.getMinutes(), 0, 0);
+      }
+      return { start, end };
     };
 
     const events = (Array.isArray(schedule) ? schedule : []).map((r, i) => {
-      const s = toStartDate(r.Date, r.Time);
+      const { start: s, end: e } = toDateRange(r.Date, r.Time);
       if (!s) return null;
-      const e = new Date(s); e.setHours(s.getHours() + 1);
       const code = String(r.StudentCode || '');
       const name = nameByCode.get(code) || '';
       const teacher = String(r.Teacher || '');
