@@ -29,6 +29,7 @@ function gregLabel(d){
 // ---------- Calendar UI ----------
 let currentWeekStart = startOfWeekMonday(new Date());
 let hasAutoJumped = false;
+let _activeScheduleAbort = null;
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
@@ -135,14 +136,23 @@ modalForm?.addEventListener('submit', async (e) => {
 // ---------- Data rendering ----------
 async function loadSchedule() {
   try {
-    const [scheduleRes, studentsRes] = await Promise.all([
-      fetch(`${API_URL}?sheet=schedule`, { cache:'no-store' }),
-      fetch(`${API_URL}?sheet=students`, { cache:'no-store' }),
-    ]);
-    const [schedule, students] = await Promise.all([scheduleRes.json(), studentsRes.json()]);
-    const nameByCode = new Map((students||[]).map(s => [String(s.Code), String(s.Name||'')]));
-    // Cache full students map for tooltips
-    _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
+    // Abort any in-flight schedule request to keep UI snappy on fast nav
+    if (_activeScheduleAbort) { try { _activeScheduleAbort.abort(); } catch {} }
+    const ac = new AbortController();
+    _activeScheduleAbort = ac;
+
+    // Load students once and cache for the session
+    if (!_studentsCache) {
+      const studentsRes = await fetch(`${API_URL}?sheet=students`, { cache:'no-store' });
+      const students = await studentsRes.json();
+      _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
+    }
+    // Derive name map from cache
+    const nameByCode = new Map(Array.from(_studentsCache.values()).map(s => [String(s.Code), String(s.Name||'')]));
+
+    // Fetch schedule (can change frequently)
+    const scheduleRes = await fetch(`${API_URL}?sheet=schedule`, { cache:'no-store', signal: ac.signal });
+    const schedule = await scheduleRes.json();
 
     // Clear only booking containers, keep the "+ Add" buttons and structure
     document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
@@ -250,7 +260,10 @@ async function loadSchedule() {
         });
         cell.appendChild(el);
       });
-  } catch (err) { console.error('loadSchedule error', err); }
+  } catch (err) {
+    if (err?.name === 'AbortError') return; // ignore aborted fetches
+    console.error('loadSchedule error', err);
+  }
 }
 
 // ---------- Fetch helper ----------
@@ -376,3 +389,23 @@ function normalizeTeacherKey(t){
   if (/others/i.test(s) || s.includes('อื่น')) return 'others';
   return 'others';
 }
+
+// ---------- Notes modal ----------
+const notesBtn = document.getElementById('notesBtn');
+const notesModal = document.getElementById('notesModal');
+const notesClose = document.getElementById('notesClose');
+const notesSave = document.getElementById('notesSave');
+const notesArea = document.getElementById('notesArea');
+
+function openNotes(){
+  if (!notesModal) return;
+  try { notesArea.value = localStorage.getItem('notes') || ''; } catch { notesArea.value = ''; }
+  notesModal.hidden = false;
+}
+function closeNotes(){ if (notesModal) notesModal.hidden = true; }
+function saveNotes(){ try { localStorage.setItem('notes', notesArea.value || ''); } catch {} closeNotes(); }
+
+notesBtn?.addEventListener('click', openNotes);
+notesClose?.addEventListener('click', closeNotes);
+notesModal?.addEventListener('click', (e)=>{ if (e.target === notesModal) closeNotes(); });
+notesSave?.addEventListener('click', saveNotes);

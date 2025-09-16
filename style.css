@@ -46,14 +46,14 @@ h1::after{
   border-radius:999px;
   background:linear-gradient(90deg, rgba(246,163,42,0.6), rgba(59,130,246,0.35));
 }
-#calendar { max-width:1100px; margin:0 auto; position:relative; }
+#calendar { max-width:1100px; margin:0 auto; position:relative; padding:12px; background:rgba(255,255,255,0.9); border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,0.08); }
 .cal-table { position: relative; z-index: 1; }
 .time-gradient-overlay{ position:absolute; pointer-events:none; z-index:0; background:linear-gradient(180deg,#fff6cc 0%, #e6f0ff 100%); border-right:1px solid var(--grid); }
-.cal-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+.cal-table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; }
 .cal-table th,.cal-table td{ border:1px solid var(--grid); vertical-align:top; }
-.cal-table thead th{ position:sticky; top:0; background:#fafafa; z-index:1; padding:8px; font-weight:600; }
+.cal-table thead th{ position:sticky; top:0; background:#f8fafc; z-index:1; padding:10px; font-weight:600; color:#0f172a; }
 .cal-time{ width:72px; font-size:12px; color:#111827; text-align:right; padding:6px; background:transparent; position:relative; z-index:2; font-weight:600; text-shadow:0 1px 0 rgba(255,255,255,0.75); }
-.cal-cell{ height:66px; padding:6px; cursor:pointer; }
+.cal-cell{ height:66px; padding:6px; cursor:pointer; background:rgba(255,255,255,0.85); }
 .cal-cell:hover{ filter:brightness(0.98); }
 .dow-0{ background:#ffe5e5; } /* Sunday pastel red */
 .dow-1{ background:#fff6cc; } /* Monday pastel yellow */
@@ -137,3 +137,6 @@ h1::after{
 
 /* Ensure inputs inside modals never overflow */
 .modal-card * { min-width:0; }
+
+/* Center the leave confirmation modal */
+#leaveModal.modal{ place-items:center; padding:16px; }
