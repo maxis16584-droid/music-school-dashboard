@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbxGkUyz6o-ElLcSw-wtnqiVqiG7SKDuLn-Pjx20rmIeOWe-D3PkY_Gh6Uu238BqRhk7pg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw2zEnWPR-XtRDTp0Nm27z_bMwXY-1ccjlMctTa8qL5jGhv3MoS_KILNoRxjem-LKelCg/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
@@ -130,13 +130,15 @@ modalForm?.addEventListener('submit', async (e) => {
   try {
     const code = document.getElementById('modalCode').value.trim();
     const name = document.getElementById('modalName').value.trim();
-    const teacher = document.getElementById('modalTeacher').value.trim();
+    const teacherRaw = document.getElementById('modalTeacher').value.trim();
+    const teacher = normalizeTeacherLabelClient(teacherRaw);
     const total = parseInt(document.getElementById('modalCourseTotal').value || '0', 10);
     const dateStr = document.getElementById('modalDate').value;
     const timeStr = document.getElementById('modalTime').value;
     if (!code || !name || !teacher || !total || !dateStr || !timeStr) { alert('Please complete all fields'); return; }
 
-    await postFormStrict({ action:'addBooking', studentCode: code, studentName: name, teacher, courseHours: total, date: dateStr, time: timeStr });
+    // Send both courseHours and courseTotal for compatibility with backend variants
+    await postFormStrict({ action:'addBooking', studentCode: code, studentName: name, teacher, courseHours: total, courseTotal: total, date: dateStr, time: timeStr });
     modalEl.hidden = true; modalForm.reset();
     showToast('บันทึกสำเร็จ');
     await loadSchedule();
@@ -167,9 +169,19 @@ async function loadSchedule() {
     // Prefetch one week before and after for instant nav
     const preFrom = ymd(addDays(visStart, -7));
     const preTo = ymd(addDays(visEnd, 7));
-    const scheduleRes = await fetch(`${API_URL}?sheet=schedule&from=${encodeURIComponent(preFrom)}&to=${encodeURIComponent(preTo)}`, { cache:'no-store', signal: ac.signal });
-    let schedule = await scheduleRes.json();
-    if (schedule && schedule.ok && Array.isArray(schedule.result)) schedule = schedule.result;
+    let schedule = [];
+    try {
+      const scheduleRes = await fetch(`${API_URL}?sheet=schedule&from=${encodeURIComponent(preFrom)}&to=${encodeURIComponent(preTo)}`, { cache:'no-store', signal: ac.signal });
+      let json = await scheduleRes.json();
+      schedule = (json && json.ok && Array.isArray(json.result)) ? json.result : json;
+      if (!Array.isArray(schedule)) throw new Error('unexpected schedule shape');
+    } catch (e) {
+      // Fallback to full fetch if backend does not support range
+      const scheduleRes2 = await fetch(`${API_URL}?sheet=schedule`, { cache:'no-store', signal: ac.signal });
+      let json2 = await scheduleRes2.json();
+      schedule = (json2 && json2.ok && Array.isArray(json2.result)) ? json2.result : json2;
+      if (!Array.isArray(schedule)) throw e;
+    }
 
     // Clear only booking containers, keep the "+ Add" buttons and structure
     document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
@@ -352,6 +364,17 @@ function normalizeTeacherKey(t){
   return 'others';
 }
 
+function normalizeTeacherLabelClient(t){
+  const s = String(t || '').trim();
+  if (!s) return 'Others';
+  if (s.indexOf('ครูโทน') !== -1) return 'ครูโทน';
+  if (s.indexOf('ครูบอย') !== -1) return 'ครูบอย';
+  if (s.indexOf('ครูหนึ่ง') !== -1) return 'ครูหนึ่ง';
+  if (s.indexOf('ครูเอก') !== -1) return 'ครูเอก';
+  if (/others/i.test(s) || s.indexOf('อื่น') !== -1) return 'Others';
+  return 'Others';
+}
+
 // Quick client-side render from cached normalized data
 function renderVisibleFromCache(){
   if (!_normalizedCache) return;
@@ -406,7 +429,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
       try {
         // Optimistic: remove the booking box immediately
         const parent = el.parentNode; if (parent) parent.removeChild(el);
-        const res = await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code });
+        const res = await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher: normalizeTeacherLabelClient(teacher), studentCode: code });
         showToast('ทำการลาแล้ว ลบกล่อง และเพิ่มรอบใหม่แล้ว');
         await loadSchedule();
       } catch (err) {
@@ -482,7 +505,7 @@ moveForm?.addEventListener('submit', async (e) => {
       const node = [...oldCell.children].find(n => n.classList.contains('booking') && n.textContent.includes(code) && n.textContent.includes(teacher));
       if (node) oldCell.removeChild(node);
     }
-    await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime, teacher, studentCode: code });
+    await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime, teacher: normalizeTeacherLabelClient(teacher), studentCode: code });
     showToast('ย้ายเวลาเรียบร้อย');
     closeMoveModal();
     await loadSchedule();
