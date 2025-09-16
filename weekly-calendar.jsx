@@ -13,7 +13,15 @@ function wcStartOfWeekMonday(date = new Date()) {
 function wcAddDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function wcIsSameYMD(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
 function wcToDate(val) { return val instanceof Date ? val : new Date(val); }
-function wcHHMM(date) { const h=String(date.getHours()).padStart(2,'0'); const m=String(date.getMinutes()).padStart(2,'0'); return `${h}:${m}`; }
+const LOCALE = 'th-TH';
+const TIME_ZONE = 'Asia/Bangkok';
+function wcHHMM(date) {
+  try {
+    return date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TIME_ZONE });
+  } catch (_) {
+    const h=String(date.getHours()).padStart(2,'0'); const m=String(date.getMinutes()).padStart(2,'0'); return `${h}:${m}`;
+  }
+}
 
 function WeeklyCalendar({
   events = [],
@@ -60,11 +68,11 @@ function WeeklyCalendar({
   const weekLabel = (() => {
     const start = days[0];
     const end = days[6];
-    const opts = { month: 'short', day: 'numeric' };
-    return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+    const opts = { year: 'numeric', month: 'short', day: 'numeric', timeZone: TIME_ZONE };
+    return `${start.toLocaleDateString(LOCALE, opts)} – ${end.toLocaleDateString(LOCALE, opts)}`;
   })();
 
-  const weekdayHeader = (d) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const weekdayHeader = (d) => d.toLocaleDateString(LOCALE, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', timeZone: TIME_ZONE });
 
   return (
     <div className="wc-container">
