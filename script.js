@@ -69,6 +69,26 @@ function renderCalendar() {
   html += '</tbody></table>';
   container.innerHTML = html;
 
+  // Add continuous gradient overlay for time column
+  try {
+    // Remove existing overlay
+    container.querySelectorAll('.time-gradient-overlay').forEach(n => n.remove());
+    const table = container.querySelector('.cal-table');
+    const firstTimeCell = container.querySelector('.cal-time');
+    if (table && firstTimeCell) {
+      const tableRect = table.getBoundingClientRect();
+      const calRect = container.getBoundingClientRect();
+      const timeRect = firstTimeCell.getBoundingClientRect();
+      const overlay = document.createElement('div');
+      overlay.className = 'time-gradient-overlay';
+      overlay.style.left = (timeRect.left - calRect.left) + 'px';
+      overlay.style.top = (tableRect.top - calRect.top) + 'px';
+      overlay.style.width = timeRect.width + 'px';
+      overlay.style.height = tableRect.height + 'px';
+      container.appendChild(overlay);
+    }
+  } catch(e) { console.warn('time gradient overlay error', e); }
+
   // Add booking buttons
   container.querySelectorAll('.add-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -240,11 +260,11 @@ async function loadSchedule() {
         el.addEventListener('mouseenter', (ev) => {
           const tip = document.createElement('div');
           tip.className = 'tooltip';
-          const info = getStudentInfo(code);
-          const used = (info && Number(info.CourseUsed)) || 0;
-          const total = (info && Number(info.CourseTotal)) || 0;
-          const remaining = total ? Math.max(0, total - used) : 'N/A';
-          tip.textContent = `Used: ${used} | Remaining: ${remaining}`;
+          const info = getStudentInfo(code) || {};
+          const used = Number(info.CourseUsed ?? 0);
+          const total = Number(info.CourseTotal ?? 0);
+          const remaining = Math.max(0, total - used);
+          tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
           document.body.appendChild(tip);
           positionTooltip(tip, ev.clientX, ev.clientY);
           el._tip = tip;
