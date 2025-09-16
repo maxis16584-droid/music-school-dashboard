@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbw2zEnWPR-XtRDTp0Nm27z_bMwXY-1ccjlMctTa8qL5jGhv3MoS_KILNoRxjem-LKelCg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyA9UvKbpmOIWi0JGrf2cU8ut8y7RML5slfaycvUZ418GuXSNcsl5CKpjV0WbAZqJHqaQ/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
@@ -35,11 +35,14 @@ let _normalizedCache = null; // normalized events for fast re-render
 let _scheduleFetchedAt = 0;
 let _cacheFrom = null;
 let _cacheTo = null;
+// Fast lookup for calendar cells (key: `${dateIso}|${timeHH}` -> `.slot-bookings` element)
+let _cellMap = null;
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
   const weekStart = currentWeekStart;
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+  const todayIso = ymd(new Date());
 
   // Week range label in Gregorian, e.g., Mon, 15 Sep 2025 – Sun, 21 Sep 2025
   const startLabel = gregLabel(days[0]);
@@ -56,7 +59,7 @@ function renderCalendar() {
   </div>`;
 
   html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
-  days.forEach(d => { html += `<th>${gregLabel(d)}</th>`; });
+  days.forEach(d => { const dIso = ymd(d); const isToday = (dIso === todayIso); html += `<th data-date="${dIso}"${isToday ? ' class="is-today"' : ''}>${gregLabel(d)}</th>`; });
   html += '</tr></thead><tbody>';
 
   for (let h = START_HOUR; h <= END_HOUR; h++) {
@@ -65,7 +68,8 @@ function renderCalendar() {
     days.forEach(d => {
       const dateIso = ymd(d);
       const timeHH = `${String(h).padStart(2,'0')}:00`;
-      html += `<td class="cal-cell" data-date="${dateIso}" data-time="${timeHH}">`
+      const isToday = (dateIso === todayIso);
+      html += `<td class="cal-cell${isToday ? ' is-today' : ''}" data-date="${dateIso}" data-time="${timeHH}">`
            +  `<div class="cell-actions"><button class="add-btn" data-date="${dateIso}" data-time="${timeHH}">+ Add</button></div>`
            +  `<div class="slot-bookings"></div>`
            +  `</td>`;
@@ -74,6 +78,17 @@ function renderCalendar() {
   }
   html += '</tbody></table>';
   container.innerHTML = html;
+
+  // Index cells for O(1) lookup during rendering
+  _cellMap = new Map();
+  container.querySelectorAll('.cal-cell').forEach(cell => {
+    const dateIso = cell.getAttribute('data-date');
+    const timeHH = cell.getAttribute('data-time');
+    const box = cell.querySelector('.slot-bookings');
+    if (dateIso && timeHH && box) {
+      _cellMap.set(`${dateIso}|${timeHH}`, box);
+    }
+  });
 
   // Add booking buttons
   container.querySelectorAll('.add-btn').forEach(btn => {
@@ -183,8 +198,8 @@ async function loadSchedule() {
       if (!Array.isArray(schedule)) throw e;
     }
 
-    // Clear only booking containers, keep the "+ Add" buttons and structure
-    document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
+    // Clear only booking containers using the indexed map
+    if (_cellMap) { _cellMap.forEach(box => { box.textContent = ''; }); }
 
     const normalized = [];
     (schedule||[]).forEach(row => {
@@ -231,16 +246,22 @@ async function loadSchedule() {
     _cacheFrom = preFrom;
     _cacheTo = preTo;
 
-    // Render only events within current visible week
-    normalized
-      .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
-      .forEach((ev) => {
-        const { dateIso, timeHH } = ev;
-        const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
-        if (!cell) { console.warn('No matching cell for', dateIso, timeHH, ev.row); return; }
-        const el = buildBookingEl(ev);
-        cell.appendChild(el);
-      });
+    // Render only events within current visible week (batch by cell to reduce reflows)
+    const groups = new Map(); // key -> array of events
+    for (const ev of normalized) {
+      if (ev.dateIso < startY || ev.dateIso > endY) continue;
+      const key = `${ev.dateIso}|${ev.timeHH}`;
+      let arr = groups.get(key);
+      if (!arr) { arr = []; groups.set(key, arr); }
+      arr.push(ev);
+    }
+    groups.forEach((list, key) => {
+      const cell = _cellMap ? _cellMap.get(key) : null;
+      if (!cell) return;
+      const frag = document.createDocumentFragment();
+      for (const ev of list) frag.appendChild(buildBookingEl(ev));
+      cell.appendChild(frag);
+    });
   } catch (err) {
     if (err?.name === 'AbortError') return; // ignore aborted fetches
     console.error('loadSchedule error', err);
@@ -378,17 +399,26 @@ function normalizeTeacherLabelClient(t){
 // Quick client-side render from cached normalized data
 function renderVisibleFromCache(){
   if (!_normalizedCache) return;
-  // Clear containers
-  document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
+  // Clear containers via indexed map
+  if (_cellMap) { _cellMap.forEach(box => { box.textContent = ''; }); }
   const start = currentWeekStart; const end = addDays(start, 6);
   const startY = ymd(start); const endY = ymd(end);
-  _normalizedCache
-    .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
-    .forEach((ev) => {
-      const cell = document.querySelector(`.cal-cell[data-date="${ev.dateIso}"][data-time="${ev.timeHH}"] .slot-bookings`);
-      if (!cell) return;
-      cell.appendChild(buildBookingEl(ev));
-    });
+  // Batch DOM appends per cell
+  const groups = new Map();
+  for (const ev of _normalizedCache) {
+    if (ev.dateIso < startY || ev.dateIso > endY) continue;
+    const key = `${ev.dateIso}|${ev.timeHH}`;
+    let arr = groups.get(key);
+    if (!arr) { arr = []; groups.set(key, arr); }
+    arr.push(ev);
+  }
+  groups.forEach((list, key) => {
+    const cell = _cellMap ? _cellMap.get(key) : null;
+    if (!cell) return;
+    const frag = document.createDocumentFragment();
+    for (const ev of list) frag.appendChild(buildBookingEl(ev));
+    cell.appendChild(frag);
+  });
 }
 
 // ---------- Notes modal ----------
@@ -416,7 +446,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
   const el = document.createElement('div');
   const tKey = normalizeTeacherKey(teacher);
   el.className = `booking teacher-${tKey}`;
-  el.innerHTML = `<span>(${code}, ${name || ''}, ${teacher})</span>`;
+  el.innerHTML = `<div class="info"><span>(${code}, ${name || ''}, ${teacher})</span></div><div class="actions"></div>`;
 
   // Leave button
   const btn = document.createElement('button');
@@ -428,6 +458,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
       btn.disabled = true;
       try {
         // Optimistic: remove the booking box immediately
+        if (el._tip) { try { el._tip.remove(); } catch {} el._tip = null; }
         const parent = el.parentNode; if (parent) parent.removeChild(el);
         const res = await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher: normalizeTeacherLabelClient(teacher), studentCode: code });
         showToast('ทำการลาแล้ว ลบกล่อง และเพิ่มรอบใหม่แล้ว');
@@ -440,7 +471,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
       }
     });
   });
-  el.appendChild(btn);
+  el.querySelector('.actions').appendChild(btn);
 
   // Move button
   const moveBtn = document.createElement('button');
@@ -450,7 +481,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
     ev.stopPropagation();
     openMoveModal({ dateIso, timeHH, rawTime, code, teacher, name });
   });
-  el.appendChild(moveBtn);
+  el.querySelector('.actions').appendChild(moveBtn);
 
   // Tooltip
   el.addEventListener('mouseenter', (ev) => {
@@ -463,7 +494,9 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
     el._tip = tip;
   });
   el.addEventListener('mousemove', (ev) => { if (el._tip) positionTooltip(el._tip, ev.clientX, ev.clientY); });
-  el.addEventListener('mouseleave', () => { if (el._tip) { el._tip.remove(); el._tip = null; } });
+  // Robust cleanup on leave and mouseout to avoid lingering tooltips
+  el.addEventListener('mouseleave', () => { if (el._tip) { try { el._tip.remove(); } catch {} el._tip = null; } });
+  el.addEventListener('mouseout', (ev) => { if (!el.contains(ev.relatedTarget)) { if (el._tip) { try { el._tip.remove(); } catch {} el._tip = null; } } });
 
   return el;
 }
@@ -526,3 +559,11 @@ function showToast(message){
     setTimeout(()=>{ try{ el.remove(); }catch{} }, 200);
   }, 2000);
 }
+
+// Global click/scroll cleanup for any orphan tooltips
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tooltip').forEach(t => { try { t.remove(); } catch {} });
+});
+window.addEventListener('scroll', () => {
+  document.querySelectorAll('.tooltip').forEach(t => { try { t.remove(); } catch {} });
+}, { passive: true });

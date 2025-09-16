@@ -3,7 +3,7 @@
   --bg:#fff;
   --text:#1f2937;
   --card:#fff;
-  --grid:#e5e7eb;
+  --grid:#d1d5db;
   --muted:#6b7280;
   --accent:#f6a32a;
   --event:#fff3d6;
@@ -22,38 +22,40 @@
 body {
   font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   color:var(--text);
-  margin:16px;
-  /* Polished subtle background matching warm accent */
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(246,163,42,0.12), transparent 60%),
-    radial-gradient(1000px 500px at 90% 0%, rgba(59,130,246,0.10), transparent 60%),
-    linear-gradient(180deg,#ffffff, #fafafa);
+  margin:0;
+  /* Pastel cream → peach-pink → coral-orange + decorative image */
+  background-image:
+    url('music-bg.png'),
+    linear-gradient(to bottom, #FFF6E9, #F9A88E, #F7845D);
+  background-size: cover, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  background-position: center top, center top;
+  background-attachment: fixed, fixed;
+  min-height: 100vh;
 }
 h1 {
   text-align:center;
   font-weight:700;
-  margin:8px 0 16px;
+  margin:8px 0 8px;
   letter-spacing:0.2px;
   color:#0f172a;
   position:relative;
 }
-h1::after{
-  content:"";
-  display:block;
-  height:6px;
-  width:140px;
-  margin:6px auto 0;
-  border-radius:999px;
-  background:linear-gradient(90deg, rgba(246,163,42,0.6), rgba(59,130,246,0.35));
-}
-#calendar { max-width:1100px; margin:0 auto; position:relative; padding:12px; background:rgba(255,255,255,0.9); border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,0.08); }
+/* Gradient divider + slogan just under h1 */
+.header-divider{ height:2px; width:min(720px, 92%); margin:8px auto 4px; border-radius:999px; background:linear-gradient(90deg,#FFA500,#FFD700); }
+.slogan{ text-align:center; color:#6b7280; margin:4px 0 12px; font-size:clamp(12px, 1.8vw, 14px); }
+#calendar { max-width:1100px; margin:12px auto 24px; position:relative; padding:12px; background:#ffffff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.12); }
 .cal-table { position: relative; z-index: 1; }
 .time-gradient-overlay{ position:absolute; pointer-events:none; z-index:0; background:linear-gradient(180deg,#fff6cc 0%, #e6f0ff 100%); border-right:1px solid var(--grid); }
-.cal-table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; }
+.cal-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; border:1px solid var(--grid); }
 .cal-table th,.cal-table td{ border:1px solid var(--grid); vertical-align:top; }
-.cal-table thead th{ position:sticky; top:0; background:#f8fafc; z-index:1; padding:10px; font-weight:600; color:#0f172a; }
+.cal-table thead th{ position:sticky; top:0; background:#fff3d6; z-index:1; padding:10px; font-weight:600; color:#0f172a; }
+.cal-table thead th:first-child{ border-top-left-radius:12px; }
+.cal-table thead th:last-child{ border-top-right-radius:12px; }
+.cal-table thead th.is-today{ background:#ffe9c2; box-shadow:inset 0 0 0 2px rgba(246,163,42,0.25); }
 .cal-time{ width:72px; font-size:12px; color:#111827; text-align:right; padding:6px; background:transparent; position:relative; z-index:2; font-weight:600; text-shadow:0 1px 0 rgba(255,255,255,0.75); }
-.cal-cell{ height:66px; padding:6px; cursor:pointer; background:rgba(255,255,255,0.85); }
+.cal-cell{ height:66px; padding:6px; cursor:pointer; background:rgba(255,255,255,0.95); }
+.cal-cell.is-today{ background:rgba(255,233,214,0.5); outline:2px solid rgba(246,163,42,0.18); outline-offset:-2px; }
 .cal-cell:hover{ filter:brightness(0.98); }
 .dow-0{ background:#ffe5e5; } /* Sunday pastel red */
 .dow-1{ background:#fff6cc; } /* Monday pastel yellow */
@@ -70,13 +72,14 @@ h1::after{
   margin:6px 0;
   font-size:12px;
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
   color:#0f172a;
   box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(0,0,0,0.05);
 }
-.booking > span{ font-weight:600; }
+.booking .info > span{ font-weight:600; }
+.booking .actions{ display:flex; gap:6px; flex-wrap:wrap; }
 .booking.teacher-ton{ background:var(--t-ton-bg); border-left-color:var(--t-ton-border); color:#111827; }
 .booking.teacher-boy{ background:var(--t-boy-bg); border-left-color:var(--t-boy-border); color:#111827; }
 .booking.teacher-nueng{ background:var(--t-nueng-bg); border-left-color:var(--t-nueng-border); color:#0b3d2e; }
@@ -148,3 +151,15 @@ h1::after{
 .toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
   background:#111827; color:#fff; padding:10px 14px; border-radius:10px; font-size:13px; box-shadow:0 8px 20px rgba(0,0,0,0.2); z-index:5000; opacity:0; transition:opacity .15s ease, transform .15s ease; }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* Decorative bottom wave */
+body::after{
+  content:""; position:fixed; left:0; right:0; bottom:0; height:140px; z-index:-1;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(247,132,93,0.9) 0%, rgba(247,132,93,0.6) 60%, rgba(247,132,93,0) 61%)
+              ,linear-gradient(0deg, rgba(247,132,93,0.8), rgba(247,132,93,0.6));
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px){
+  #calendar{ margin:12px 8px 24px; border-radius:14px; box-shadow:0 10px 24px rgba(0,0,0,0.12); }
+}
