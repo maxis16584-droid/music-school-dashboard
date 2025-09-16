@@ -116,15 +116,14 @@ function WeeklyCalendar({
 }
 
 // Expose a simple renderer wired to the #calendar-root
-window.renderWeeklyCalendar = function(events) {
+window.renderWeeklyCalendar = function(events, opts = {}) {
   const rootEl = document.getElementById('calendar-root');
   if (!rootEl) return;
   const root = (rootEl.__root ||= ReactDOM.createRoot(rootEl));
-  root.render(<WeeklyCalendar events={events} onEventClick={(ev)=>console.log('Event', ev)} />);
+  root.render(<WeeklyCalendar events={events} onEventClick={(ev)=>console.log('Event', ev)} {...opts} />);
 };
 
 // If there were pending events queued before this script loaded
 if (Array.isArray(window.__pendingCalendarEvents)) {
   window.renderWeeklyCalendar(window.__pendingCalendarEvents);
 }
-

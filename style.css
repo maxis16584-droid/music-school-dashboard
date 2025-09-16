@@ -191,6 +191,23 @@ form button {
   box-shadow: 0 1px 3px var(--shadow);
 }
 
+/* Primary action button (top-right) */
+.primary-action {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #151515;
+  font-weight: 700;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+}
+.primary-action:hover { filter: brightness(1.05); }
+.primary-action:active { transform: translateY(1px); }
+
 /* Brand logo at top-right */
 .brand-logo {
   display: block;

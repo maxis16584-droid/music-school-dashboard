@@ -152,6 +152,11 @@ async function leave(date, time, teacher, studentCode) {
 
 // ผูก event กับ form
 document.getElementById("addStudentForm").addEventListener("submit", addStudent);
+// Top-right primary button scrolls to the Add Student form
+document.getElementById("addStudentTop")?.addEventListener("click", () => {
+  const form = document.getElementById("addStudentForm");
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 // โหลดตารางครั้งแรก (students only)
 loadStudentsView();
@@ -316,40 +321,63 @@ async function loadStudentsView() {
     html += "</table>";
     document.getElementById("schedule").innerHTML = html;
 
-    // Also render the weekly calendar from these students as 1-hour events in the current week
-    try {
-      const start = startOfWeekMon(new Date());
-      const offsetMap = { Sun:6, Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5 };
-      const parseHHMM = (s) => {
-        const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-        return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 0, m: 0 };
-      };
-      const events = rows.map((r, idx) => {
-        const off = offsetMap[r.day] ?? 0;
-        const d = new Date(start);
-        d.setDate(start.getDate() + off);
-        const { h, m } = parseHHMM(r.time);
-        const s = new Date(d); s.setHours(h, m, 0, 0);
-        const e = new Date(s); e.setHours(s.getHours() + 1);
-        return {
-          id: String(idx + 1),
-          title: `${r.code} - ${r.teacher}`,
-          start: s,
-          end: e,
-          color: undefined
-        };
-      });
-      if (window.renderWeeklyCalendar) {
-        window.renderWeeklyCalendar(events);
-      } else {
-        window.__pendingCalendarEvents = events;
-      }
-    } catch (e) {
-      console.warn('Calendar render skipped:', e);
-    }
+    // Render Weekly Calendar from schedule + students mapping
+    renderCalendarFromAPI();
   } catch (err) {
     document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
     console.error(err);
+  }
+}
+
+// Build events from schedule + students and render in calendar
+async function renderCalendarFromAPI() {
+  try {
+    const [scheduleRes, studentsRes] = await Promise.all([
+      fetch(API_URL + "?sheet=schedule", { cache: "no-store" }),
+      fetch(API_URL + "?sheet=students", { cache: "no-store" })
+    ]);
+    const [schedule, students] = await Promise.all([
+      scheduleRes.json(),
+      studentsRes.json()
+    ]);
+    const nameByCode = new Map(students.map(s => [String(s.Code), String(s.Name || '')]));
+
+    const parseHHMM = (s) => {
+      const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+      return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 0, m: 0 };
+    };
+    const toStartDate = (dateStr, timeStr) => {
+      const d = parseDate(dateStr);
+      if (!d) return null;
+      const { h, m } = parseHHMM(timeStr);
+      const s = new Date(d);
+      s.setHours(h, m, 0, 0);
+      return s;
+    };
+
+    const events = (Array.isArray(schedule) ? schedule : []).map((r, i) => {
+      const s = toStartDate(r.Date, r.Time);
+      if (!s) return null;
+      const e = new Date(s); e.setHours(s.getHours() + 1);
+      const code = String(r.StudentCode || '');
+      const name = nameByCode.get(code) || '';
+      const teacher = String(r.Teacher || '');
+      return {
+        id: String(i + 1),
+        title: `(${code}, ${name}, ${teacher})`,
+        start: s,
+        end: e,
+        color: undefined
+      };
+    }).filter(Boolean);
+
+    if (window.renderWeeklyCalendar) {
+      window.renderWeeklyCalendar(events, { startHour: 13, endHour: 20 });
+    } else {
+      window.__pendingCalendarEvents = events;
+    }
+  } catch (e) {
+    console.warn('Calendar API fetch failed:', e);
   }
 }
 
