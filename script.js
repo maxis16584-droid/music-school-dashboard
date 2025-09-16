@@ -1,11 +1,9 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbzXIvC52_mByHpkmmiJct3rlIDHdh1m32nTyHFUKozsupADqSjg5BhlPFIgk_GumpdZ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwo976Quil2jt7jRj2VjfGr0lbxXhyqbGsfU5oC3AsaphHUK8ZI_S0__5ImII1sEF8/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
-// Locale for header labels (Thai names with Gregorian year by default)
-const LABEL_LOCALE = 'th-TH-u-ca-gregory'; // change to 'en-GB' or 'en-US' for English
 const START_HOUR = 13;
 const END_HOUR = 20;
 
@@ -20,6 +18,8 @@ function startOfWeekMonday(d = new Date()) {
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+// Use Thai labels with Gregorian year (or swap to 'en-GB'/'en-US' as desired)
+const LABEL_LOCALE = 'th-TH-u-ca-gregory';
 function gregLabel(d){
   return d.toLocaleDateString(LABEL_LOCALE, {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
@@ -50,7 +50,7 @@ function renderCalendar() {
   </div>`;
 
   html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
-  days.forEach(d => { html += `<th class="dow-${d.getDay()}">${gregLabel(d)}</th>`; });
+  days.forEach(d => { html += `<th>${gregLabel(d)}</th>`; });
   html += '</tr></thead><tbody>';
 
   for (let h = START_HOUR; h <= END_HOUR; h++) {
@@ -59,7 +59,7 @@ function renderCalendar() {
     days.forEach(d => {
       const dateIso = ymd(d);
       const timeHH = `${String(h).padStart(2,'0')}:00`;
-      html += `<td class="cal-cell dow-${d.getDay()}" data-date="${dateIso}" data-time="${timeHH}">`
+      html += `<td class="cal-cell" data-date="${dateIso}" data-time="${timeHH}">`
            +  `<div class="cell-actions"><button class="add-btn" data-date="${dateIso}" data-time="${timeHH}">+ Add</button></div>`
            +  `<div class="slot-bookings"></div>`
            +  `</td>`;
@@ -68,26 +68,6 @@ function renderCalendar() {
   }
   html += '</tbody></table>';
   container.innerHTML = html;
-
-  // Add continuous gradient overlay for time column
-  try {
-    // Remove existing overlay
-    container.querySelectorAll('.time-gradient-overlay').forEach(n => n.remove());
-    const table = container.querySelector('.cal-table');
-    const firstTimeCell = container.querySelector('.cal-time');
-    if (table && firstTimeCell) {
-      const tableRect = table.getBoundingClientRect();
-      const calRect = container.getBoundingClientRect();
-      const timeRect = firstTimeCell.getBoundingClientRect();
-      const overlay = document.createElement('div');
-      overlay.className = 'time-gradient-overlay';
-      overlay.style.left = (timeRect.left - calRect.left) + 'px';
-      overlay.style.top = (tableRect.top - calRect.top) + 'px';
-      overlay.style.width = timeRect.width + 'px';
-      overlay.style.height = tableRect.height + 'px';
-      container.appendChild(overlay);
-    }
-  } catch(e) { console.warn('time gradient overlay error', e); }
 
   // Add booking buttons
   container.querySelectorAll('.add-btn').forEach(btn => {
@@ -164,8 +144,8 @@ async function loadSchedule() {
     // Cache full students map for tooltips
     _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
 
-    // Clear only booking containers, keep the "+ Add" button and structure
-    document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
+    // Clear cells
+    document.querySelectorAll('.cal-cell').forEach(cell => cell.innerHTML = '');
 
     // Compute current visible week range (YYYY-MM-DD)
     const start = currentWeekStart;
@@ -210,18 +190,10 @@ async function loadSchedule() {
     }
 
     // Render only events within current visible week
-    // Build a quick map for cells to speed up placement
-    const cellMap = new Map();
-    document.querySelectorAll('.cal-cell').forEach(td => {
-      const key = `${td.getAttribute('data-date')}|${td.getAttribute('data-time')}`;
-      const box = td.querySelector('.slot-bookings');
-      if (box) cellMap.set(key, box);
-    });
-
     normalized
       .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
       .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
-        const cell = cellMap.get(`${dateIso}|${timeHH}`);
+        const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
         if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
         const el = document.createElement('div');
         el.className = 'booking';
@@ -237,6 +209,7 @@ async function loadSchedule() {
             try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
             catch (err) { btn.disabled = false; alert(`❌ Leave error: ${err?.message || err}`); }
           });
+          catch (err) { alert(`❌ Leave error: ${err?.message || err}`); }
         });
         el.appendChild(btn);
 
@@ -260,11 +233,11 @@ async function loadSchedule() {
         el.addEventListener('mouseenter', (ev) => {
           const tip = document.createElement('div');
           tip.className = 'tooltip';
-          const info = getStudentInfo(code) || {};
-          const used = Number(info.CourseUsed ?? 0);
-          const total = Number(info.CourseTotal ?? 0);
-          const remaining = Math.max(0, total - used);
-          tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
+          const info = getStudentInfo(code);
+          const used = (info && Number(info.CourseUsed)) || 0;
+          const total = (info && Number(info.CourseTotal)) || 0;
+          const remaining = total ? Math.max(0, total - used) : 'N/A';
+          tip.textContent = `Used: ${used} | Remaining: ${remaining}`;
           document.body.appendChild(tip);
           positionTooltip(tip, ev.clientX, ev.clientY);
           el._tip = tip;
@@ -362,8 +335,6 @@ leaveCancelBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidde
 leaveCloseBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 
 function showBookingMenu(x,y,onChoose){
-  // Close any existing menu
-  document.querySelectorAll('.booking-menu').forEach(m => m.remove());
   const menu = document.createElement('div');
   menu.className = 'booking-menu';
   const plus = document.createElement('button'); plus.textContent = '+1 hour';
@@ -373,8 +344,6 @@ function showBookingMenu(x,y,onChoose){
   menu.appendChild(minus); menu.appendChild(plus);
   document.body.appendChild(menu);
   menu.style.left = (x+10)+'px'; menu.style.top = (y+10)+'px';
-  const close = (ev)=>{ if (!menu.contains(ev.target)) { menu.remove(); window.removeEventListener('click', close, true);} };
-  setTimeout(()=> window.addEventListener('click', close, true), 0);
 }
 function shiftHour(timeHH, delta){
   const m = String(timeHH).match(/^(\d{1,2}):(\d{2})$/); if (!m) return '';
@@ -394,15 +363,4 @@ function getStudentInfo(code){
 document.addEventListener('DOMContentLoaded', () => {
   try { renderCalendar(); } catch (e) { console.error('renderCalendar error', e); }
   try { loadSchedule(); } catch (e) { console.error('loadSchedule error', e); }
-  // Notes panel wiring
-  const notesBtn = document.getElementById('notesBtn');
-  const notesModal = document.getElementById('notesModal');
-  const notesClose = document.getElementById('notesClose');
-  const notesSave = document.getElementById('notesSave');
-  const notesArea = document.getElementById('notesArea');
-  const openNotes = ()=>{ if (!notesModal) return; try { notesArea.value = localStorage.getItem('notes') || ''; } catch(_){} notesModal.hidden = false; };
-  notesBtn?.addEventListener('click', openNotes);
-  notesClose?.addEventListener('click', ()=> notesModal.hidden = true);
-  notesModal?.addEventListener('click', (e)=>{ if (e.target === notesModal) notesModal.hidden = true; });
-  notesSave?.addEventListener('click', ()=>{ try { localStorage.setItem('notes', notesArea.value||''); } catch(_){} notesModal.hidden = true; });
 });
