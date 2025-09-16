@@ -21,12 +21,27 @@ function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); retu
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 
 // ---------- Calendar UI ----------
+let currentWeekStart = startOfWeekMonday(new Date());
+
 function renderCalendar() {
   const container = document.getElementById('calendar');
-  const weekStart = startOfWeekMonday(new Date());
+  const weekStart = currentWeekStart;
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
-  let html = '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
+  const startLabel = days[0].toLocaleDateString(LOCALE, { year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
+  const endLabel = days[6].toLocaleDateString(LOCALE, { year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
+
+  let html = '';
+  html += `<div class="cal-nav" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 8px;">
+    <div style="display:flex;gap:6px;">
+      <button id="btnPrev" class="btn-primary" type="button">◀ Prev</button>
+      <button id="btnToday" class="btn-primary" type="button">This week</button>
+      <button id="btnNext" class="btn-primary" type="button">Next ▶</button>
+    </div>
+    <div style="font-weight:600;">${startLabel} – ${endLabel}</div>
+  </div>`;
+
+  html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
   days.forEach(d => {
     const label = d.toLocaleDateString(LOCALE, { weekday:'short', year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
     html += `<th>${label}</th>`;
@@ -49,6 +64,23 @@ function renderCalendar() {
   // Clicking a cell opens modal with prefilled date/time
   container.querySelectorAll('.cal-cell').forEach(cell => {
     cell.addEventListener('click', () => openAddModal(cell.getAttribute('data-date'), cell.getAttribute('data-time')));
+  });
+
+  // Week navigation
+  container.querySelector('#btnPrev')?.addEventListener('click', async () => {
+    currentWeekStart = addDays(currentWeekStart, -7);
+    renderCalendar();
+    await loadSchedule();
+  });
+  container.querySelector('#btnNext')?.addEventListener('click', async () => {
+    currentWeekStart = addDays(currentWeekStart, 7);
+    renderCalendar();
+    await loadSchedule();
+  });
+  container.querySelector('#btnToday')?.addEventListener('click', async () => {
+    currentWeekStart = startOfWeekMonday(new Date());
+    renderCalendar();
+    await loadSchedule();
   });
 }
 
@@ -105,8 +137,16 @@ async function loadSchedule() {
     // Clear cells
     document.querySelectorAll('.cal-cell').forEach(cell => cell.innerHTML = '');
 
+    // Compute current visible week range (YYYY-MM-DD)
+    const start = currentWeekStart;
+    const end = addDays(start, 6);
+    const startY = ymd(start);
+    const endY = ymd(end);
+
     (schedule||[]).forEach(row => {
       const dateIso = String(row.Date || '');
+      // Filter only rows within the visible week
+      if (dateIso < startY || dateIso > endY) return;
       const rawTime = String(row.Time || '');
       const timeHH = rawTime.split('-')[0].trim();
       const code = String(row.StudentCode || '');
