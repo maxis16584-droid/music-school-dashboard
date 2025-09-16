@@ -98,8 +98,10 @@ async function addStudent(e) {
     await postFormStrict(body);
     alert("เพิ่มนักเรียนเรียบร้อย ✅");
     document.getElementById("addStudentForm").reset();
-    // Refresh weekly schedule to reflect newly generated sessions
-    loadStudentsView();
+    const panel = document.getElementById("addStudentPanel");
+    if (panel) panel.hidden = true;
+    // Refresh calendar after adding
+    renderCalendarFromAPI();
   } catch (err) {
     console.error("addStudent error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -124,7 +126,7 @@ async function addSchedule(e) {
     await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
-    loadStudentsView();
+    renderCalendarFromAPI();
   } catch (err) {
     console.error("addSchedule error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -142,7 +144,7 @@ async function leave(date, time, teacher, studentCode) {
     console.debug("leave payload:", payload);
     await postFormStrict(payload);
     alert("บันทึกการลาแล้ว ✅");
-    loadStudentsView();
+    renderCalendarFromAPI();
   } catch (err) {
     console.error("leave error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -152,14 +154,18 @@ async function leave(date, time, teacher, studentCode) {
 
 // ผูก event กับ form
 document.getElementById("addStudentForm").addEventListener("submit", addStudent);
-// Top-right primary button scrolls to the Add Student form
+// Top-right primary button toggles the floating form
 document.getElementById("addStudentTop")?.addEventListener("click", () => {
-  const form = document.getElementById("addStudentForm");
-  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const panel = document.getElementById("addStudentPanel");
+  if (panel) panel.hidden = !panel.hidden;
+});
+document.getElementById("closeAddStudent")?.addEventListener("click", () => {
+  const panel = document.getElementById("addStudentPanel");
+  if (panel) panel.hidden = true;
 });
 
-// โหลดตารางครั้งแรก (students only)
-loadStudentsView();
+// First load: calendar only
+renderCalendarFromAPI();
 
 // แสดงตาราง จันทร์-อาทิตย์ จาก schedule sheet พร้อมปุ่มลา
 async function loadWeekSchedule() {

@@ -73,6 +73,53 @@ h1, h2 {
   box-shadow: 0 2px 8px var(--wc-shadow);
   padding: 12px;
 }
+
+/* Floating Add Student panel */
+.floating-form {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  width: 320px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px var(--shadow);
+  z-index: 1000;
+}
+.floating-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+.floating-form__title { font-weight: 700; color: #1a1a1a; }
+.floating-form__close {
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text);
+}
+.floating-form__body { padding: 12px; display: grid; gap: 8px; }
+.floating-form__body input, .floating-form__body select {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 100%;
+}
+.floating-form__submit {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #151515;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
 .wc-toolbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
