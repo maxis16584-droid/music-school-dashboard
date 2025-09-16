@@ -13,7 +13,7 @@ function wcStartOfWeekMonday(date = new Date()) {
 function wcAddDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function wcIsSameYMD(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
 function wcToDate(val) { return val instanceof Date ? val : new Date(val); }
-const LOCALE = 'th-TH';
+const LOCALE = 'th-TH-u-ca-buddhist';
 const TIME_ZONE = 'Asia/Bangkok';
 function wcHHMM(date) {
   try {

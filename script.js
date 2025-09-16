@@ -241,9 +241,17 @@ function openAddModal(date, hour) {
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const yyyy = d.getFullYear();
   const start = String(hour).padStart(2,'0') + ':00';
-  const end = String((hour+1)).padStart(2,'0') + ':00';
   document.getElementById('modalDate').value = `${yyyy}-${mm}-${dd}`;
-  document.getElementById('modalTime').value = `${start} - ${end}`;
+  document.getElementById('modalTime').value = `${start}`;
+  // Show Buddhist year display for user
+  try {
+    const thai = d.toLocaleDateString('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok' });
+    const thaiEl = document.getElementById('modalDateThai');
+    if (thaiEl) thaiEl.value = thai;
+  } catch (_) {
+    const thaiEl = document.getElementById('modalDateThai');
+    if (thaiEl) thaiEl.value = `${dd}/${mm}/${yyyy + 543}`;
+  }
   modalEl.hidden = false;
 }
 modalClose?.addEventListener('click', ()=> modalEl.hidden = true);
