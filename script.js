@@ -145,11 +145,35 @@ async function loadSchedule() {
     const endY = ymd(end);
 
     (schedule||[]).forEach(row => {
-      const dateIso = String(row.Date || '');
-      // Filter only rows within the visible week
+      // Normalize date from backend: can be 'YYYY-MM-DD' or ISO like '2025-09-15T00:00:00.000Z'
+      let dateIso = '';
+      if (typeof row.Date === 'string') {
+        const t = row.Date.trim();
+        dateIso = t.includes('T') ? ymd(new Date(t)) : t;
+      } else if (row.Date) {
+        const dObj = new Date(row.Date);
+        if (!isNaN(dObj.getTime())) dateIso = ymd(dObj);
+      }
+      if (!dateIso) return;
+
+      // Check within visible week by string compare (safe for YYYY-MM-DD)
       if (dateIso < startY || dateIso > endY) return;
-      const rawTime = String(row.Time || '');
-      const timeHH = rawTime.split('-')[0].trim();
+
+      // Normalize time: allow 'HH:mm' or 'HH:mm - HH:mm' or Date-like
+      let rawTime = '';
+      if (typeof row.Time === 'string') {
+        rawTime = row.Time.trim();
+      } else if (row.Time) {
+        const tObj = new Date(row.Time);
+        if (!isNaN(tObj.getTime())) {
+          const hh = String(tObj.getHours()).padStart(2,'0');
+          const mm = String(tObj.getMinutes()).padStart(2,'0');
+          rawTime = `${hh}:${mm}`;
+        }
+      }
+      // Normalize dash variants and extract start HH:mm
+      const firstDash = rawTime.replace(/[–—]/g,'-');
+      const timeHH = firstDash.split('-')[0].trim();
       const code = String(row.StudentCode || '');
       const teacher = String(row.Teacher || '');
       const name = nameByCode.get(code) || '';
