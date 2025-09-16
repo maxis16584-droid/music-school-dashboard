@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbx0PgwrGJLxma-_DGkbM988STH9_wKJAKsRTtf1j-bDjHeDdNXTyowly1Cu2YHeKfIV/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyLUbp825fuzeQQiPvWwftTxZD6NTFSkEgI52u7hlWCrUz9nkv8omdXJ0lZTlSbXS2p/exec";
 
 // ------------------
 // Theme: Light/Dark
@@ -118,11 +118,38 @@ function injectEventsIntoCells(events) {
     const sel = `.wc-cell[data-date="${ev._dateIso}"][data-time="${ev._timeHH}"]`;
     const cell = document.querySelector(sel);
     if (!cell) return;
-    const div = document.createElement('div');
-    div.setAttribute('data-injected','1');
-    div.textContent = ev._rawTime ? `${ev.title} - ${ev._rawTime}` : ev.title;
-    cell.appendChild(div);
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-injected','1');
+    wrap.className = 'wc-inline';
+    const label = document.createElement('span');
+    label.textContent = ev.title; // format: (Code, Name, Teacher)
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'wc-leave';
+    btn.textContent = 'Leave';
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await postFormStrict({ action: 'leave', date: ev._dateIso, time: ev._rawTime || ev._timeHH, teacher: extractTeacherFromTitle(ev.title), studentCode: extractCodeFromTitle(ev.title) });
+        loadSchedule();
+      } catch (err) {
+        alert(`❌ Leave error: ${err?.message || err}`);
+      }
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(btn);
+    cell.appendChild(wrap);
   });
+}
+
+function extractCodeFromTitle(title) {
+  // Title format: (Code, Name, Teacher)
+  const m = String(title).match(/^\(([^,]+),/);
+  return m ? m[1].trim() : '';
+}
+function extractTeacherFromTitle(title) {
+  const m = String(title).match(/,\s*[^,]+,\s*([^\)]+)\)$/);
+  return m ? m[1].trim() : '';
 }
 
 function nextFrame() {
@@ -228,15 +255,10 @@ modalEl?.addEventListener('click', (e) => {
 // Expose handler for calendar cell click
 window.__onCalendarCellClick = ({date, hour}) => openAddModal(date, hour);
 
-// Submit from modal: add student + schedule
+// Submit from modal: add booking (backend handles student creation + repeats)
 modalForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    // Fetch students to compute next ID
-    const studentsRes = await fetch(API_URL + '?sheet=students', { cache: 'no-store' });
-    const students = await studentsRes.json();
-    const nextId = computeNextId(students);
-
     const code = document.getElementById('modalCode').value.trim();
     const name = document.getElementById('modalName').value.trim();
     const total = parseInt(document.getElementById('modalCourseTotal').value || '0', 10);
@@ -249,41 +271,20 @@ modalForm?.addEventListener('submit', async (e) => {
       return;
     }
 
-    // Add student (include both time and time_slot for compatibility)
+    // Unified booking endpoint
     await postFormStrict({
-      action: 'addStudent',
-      id: String(nextId),
-      code,
-      name,
-      course_total: total,
-      time: timeSlot,
-      time_slot: timeSlot
+      action: 'addBooking',
+      studentCode: code,
+      studentName: name,
+      teacher,
+      courseHours: total,
+      date: dateStr,
+      time: timeSlot
     });
-
-    // Add schedule for N consecutive weeks
-    let base = parseDate(dateStr) || new Date(dateStr);
-    if (!(base instanceof Date) || isNaN(base.getTime())) {
-      throw new Error('รูปแบบวันที่ไม่ถูกต้อง');
-    }
-    for (let i = 0; i < total; i++) {
-      const d = new Date(base);
-      d.setDate(d.getDate() + i * 7);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      const dateISO = `${yyyy}-${mm}-${dd}`;
-      await postFormStrict({
-        action: 'addSchedule',
-        date: dateISO,
-        time: timeSlot,
-        teacher,
-        studentCode: code
-      });
-    }
 
     modalEl.hidden = true;
     modalForm.reset();
-    renderCalendarFromAPI();
+    loadSchedule();
     alert('เพิ่มนักเรียนและตารางเรียนเรียบร้อย ✅');
   } catch (err) {
     console.error('modal submit error:', err);

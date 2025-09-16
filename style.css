@@ -137,6 +137,11 @@ h1, h2 {
 .wc-event-title { font-weight: 600; }
 .wc-event-time { color: var(--wc-muted); font-size: 11px; }
 
+/* Injected plain labels + leave button */
+.wc-inline { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--card); border: 1px dashed var(--wc-grid); border-radius: 6px; padding: 2px 6px; margin-top: 4px; }
+.wc-inline .wc-leave { background: var(--accent); color: var(--btn-text); border: 0; border-radius: 6px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+.wc-inline .wc-leave:hover { filter: brightness(1.05); }
+
 table {
   width: 100%;
   border-collapse: collapse;
