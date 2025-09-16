@@ -242,6 +242,7 @@ form button {
 }
 /* Modal for adding from calendar */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: grid; place-items: start end; padding: 70px 16px 16px 16px; z-index: 1000; }
+.modal[hidden] { display: none !important; }
 .modal-card { width: 340px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 28px var(--shadow); }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--muted); border-top-left-radius: 12px; border-top-right-radius: 12px; }
 .modal-title { font-weight: 700; color: #1a1a1a; }

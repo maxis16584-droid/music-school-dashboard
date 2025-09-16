@@ -169,6 +169,10 @@ function openAddModal(date, hour) {
   modalEl.hidden = false;
 }
 modalClose?.addEventListener('click', ()=> modalEl.hidden = true);
+// Close when clicking the backdrop
+modalEl?.addEventListener('click', (e) => {
+  if (e.target === modalEl) modalEl.hidden = true;
+});
 
 // Expose handler for calendar cell click
 window.__onCalendarCellClick = ({date, hour}) => openAddModal(date, hour);
