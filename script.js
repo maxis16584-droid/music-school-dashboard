@@ -145,41 +145,21 @@ async function loadSchedule() {
     const endY = ymd(end);
 
     (schedule||[]).forEach(row => {
-      // Normalize date from backend: can be 'YYYY-MM-DD' or ISO like '2025-09-15T00:00:00.000Z'
-      let dateIso = '';
-      if (typeof row.Date === 'string') {
-        const t = row.Date.trim();
-        dateIso = t.includes('T') ? ymd(new Date(t)) : t;
-      } else if (row.Date) {
-        const dObj = new Date(row.Date);
-        if (!isNaN(dObj.getTime())) dateIso = ymd(dObj);
-      }
-      if (!dateIso) return;
+      const dateIso = normalizeDateIso(row.Date);
+      if (!dateIso) { console.warn('Skip row (bad date):', row); return; }
 
-      // Check within visible week by string compare (safe for YYYY-MM-DD)
+      // Check within visible week by ISO string bounds
       if (dateIso < startY || dateIso > endY) return;
 
-      // Normalize time: allow 'HH:mm' or 'HH:mm - HH:mm' or Date-like
-      let rawTime = '';
-      if (typeof row.Time === 'string') {
-        rawTime = row.Time.trim();
-      } else if (row.Time) {
-        const tObj = new Date(row.Time);
-        if (!isNaN(tObj.getTime())) {
-          const hh = String(tObj.getHours()).padStart(2,'0');
-          const mm = String(tObj.getMinutes()).padStart(2,'0');
-          rawTime = `${hh}:${mm}`;
-        }
-      }
-      // Normalize dash variants and extract start HH:mm
-      const firstDash = rawTime.replace(/[–—]/g,'-');
-      const timeHH = firstDash.split('-')[0].trim();
+      const rawTime = normalizeRawTime(row.Time);
+      const timeHH = extractStartTimeHH(rawTime);
+      if (!timeHH) { console.warn('Skip row (bad time):', row); return; }
       const code = String(row.StudentCode || '');
       const teacher = String(row.Teacher || '');
       const name = nameByCode.get(code) || '';
 
       const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"]`);
-      if (!cell) return;
+      if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
       const el = document.createElement('div');
       el.className = 'booking';
       el.innerHTML = `<span>(${code}, ${name}, ${teacher})</span>`;
@@ -206,6 +186,64 @@ async function postFormStrict(data) {
   if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ` - ${text.slice(0,150)}` : ''}`);
   try { const json = JSON.parse(text); if (json && json.ok !== false) return json; throw new Error(json?.error || 'Server returned failure'); }
   catch { return text; }
+}
+
+// ---------- Normalizers ----------
+function normalizeDateIso(val) {
+  if (val == null) return '';
+  if (val instanceof Date) return isNaN(val.getTime()) ? '' : ymd(val);
+  const s = String(val).trim();
+  if (!s) return '';
+  // ISO with time
+  if (s.includes('T')) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? '' : ymd(d);
+  }
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Try YYYY/MM/DD
+  let m = s.match(/^(\d{4})[\/](\d{1,2})[\/](\d{1,2})$/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    return isNaN(d.getTime()) ? '' : ymd(d);
+  }
+  // Try DD/MM/YYYY
+  m = s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{4})$/);
+  if (m) {
+    const d = new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    return isNaN(d.getTime()) ? '' : ymd(d);
+  }
+  // Fallback parse
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? '' : ymd(d);
+}
+
+function normalizeRawTime(val) {
+  if (val == null) return '';
+  if (val instanceof Date) {
+    const hh = String(val.getHours()).padStart(2,'0');
+    const mm = String(val.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }
+  return String(val).trim();
+}
+
+function extractStartTimeHH(rawTime) {
+  if (!rawTime) return '';
+  const s = rawTime.replace(/[–—]/g, '-');
+  // Extract first HH:mm or HH.mm or HHmm
+  let m = s.match(/(\d{1,2})[:\.](\d{2})/);
+  if (!m) {
+    m = s.match(/\b(\d{1,2})(\d{2})\b/); // e.g., 1700 => 17:00
+  }
+  if (!m) return '';
+  let hh = Number(m[1]);
+  let mm = Number(m[2] || 0);
+  if (isNaN(hh) || isNaN(mm)) return '';
+  // Align to top of the hour since rows are hourly
+  hh = Math.max(0, Math.min(23, hh));
+  const hhStr = String(hh).padStart(2,'0');
+  return `${hhStr}:00`;
 }
 
 // ---------- Init ----------
