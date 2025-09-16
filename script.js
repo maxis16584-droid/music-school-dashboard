@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbzUasYkOaD55dHAudRT3M05s3tRHqBWP_PpcorNUl5trjX9pu_dj-3dYLV4w62JL3KvPg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxGkUyz6o-ElLcSw-wtnqiVqiG7SKDuLn-Pjx20rmIeOWe-D3PkY_Gh6Uu238BqRhk7pg/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
@@ -33,6 +33,8 @@ let _activeScheduleAbort = null;
 let _scheduleCache = null; // raw schedule array from API
 let _normalizedCache = null; // normalized events for fast re-render
 let _scheduleFetchedAt = 0;
+let _cacheFrom = null;
+let _cacheTo = null;
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
@@ -149,33 +151,28 @@ async function loadSchedule() {
     const ac = new AbortController();
     _activeScheduleAbort = ac;
 
-    // Load students once and cache for the session
-    if (!_studentsCache) {
-      const studentsRes = await fetch(`${API_URL}?sheet=students`, { cache:'no-store' });
-      const students = await studentsRes.json();
-      _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
-    }
-    // Derive name map from cache
-    const nameByCode = new Map(Array.from(_studentsCache.values()).map(s => [String(s.Code), String(s.Name||'')]));
+    // Compute visible week range (YYYY-MM-DD)
+    const visStart = currentWeekStart;
+    const visEnd = addDays(visStart, 6);
+    const startY = ymd(visStart);
+    const endY = ymd(visEnd);
 
-    // If cache is fresh, render from it immediately and skip fetch
-    if (_normalizedCache && (Date.now() - _scheduleFetchedAt) < 15000) {
+    // No students sheet anymore; all data comes from schedule
+
+    // If cache covers current range, render immediately (still refresh in background)
+    if (_normalizedCache && _cacheFrom && _cacheTo && startY >= _cacheFrom && endY <= _cacheTo) {
       renderVisibleFromCache();
-      return;
     }
 
-    // Fetch schedule (can change frequently)
-    const scheduleRes = await fetch(`${API_URL}?sheet=schedule`, { cache:'no-store', signal: ac.signal });
-    const schedule = await scheduleRes.json();
+    // Prefetch one week before and after for instant nav
+    const preFrom = ymd(addDays(visStart, -7));
+    const preTo = ymd(addDays(visEnd, 7));
+    const scheduleRes = await fetch(`${API_URL}?sheet=schedule&from=${encodeURIComponent(preFrom)}&to=${encodeURIComponent(preTo)}`, { cache:'no-store', signal: ac.signal });
+    let schedule = await scheduleRes.json();
+    if (schedule && schedule.ok && Array.isArray(schedule.result)) schedule = schedule.result;
 
     // Clear only booking containers, keep the "+ Add" buttons and structure
     document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
-
-    // Compute current visible week range (YYYY-MM-DD)
-    const start = currentWeekStart;
-    const end = addDays(start, 6);
-    const startY = ymd(start);
-    const endY = ymd(end);
 
     const normalized = [];
     (schedule||[]).forEach(row => {
@@ -187,8 +184,10 @@ async function loadSchedule() {
       if (!timeHH) { console.warn('Skip row (bad time):', row); return; }
       const code = String(row.StudentCode || '');
       const teacher = String(row.Teacher || '');
-      const name = nameByCode.get(code) || '';
-      normalized.push({ dateIso, timeHH, rawTime, code, teacher, name, row });
+      const name = String(row.StudentName || '');
+      const used = Number(row.CourseUsed || 0) || 0;
+      const total = Number((row.CourseTotal != null ? row.CourseTotal : row.CourseHours) || 0) || 0;
+      normalized.push({ dateIso, timeHH, rawTime, code, teacher, name, used, total, row });
     });
 
     // Auto-jump to week that has data if current week has none
@@ -217,6 +216,8 @@ async function loadSchedule() {
     _scheduleCache = schedule || [];
     _normalizedCache = normalized;
     _scheduleFetchedAt = Date.now();
+    _cacheFrom = preFrom;
+    _cacheTo = preTo;
 
     // Render only events within current visible week
     normalized
@@ -238,7 +239,11 @@ async function loadSchedule() {
 async function postFormStrict(data) {
   const form = new URLSearchParams();
   Object.entries(data).forEach(([k,v]) => form.append(k, v == null ? '' : String(v)));
-  const res = await fetch(API_URL, { method:'POST', body: form });
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: form
+  });
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ` - ${text.slice(0,150)}` : ''}`);
   try { const json = JSON.parse(text); if (json && json.ok !== false) return json; throw new Error(json?.error || 'Server returned failure'); }
@@ -321,12 +326,7 @@ function positionTooltip(el,x,y){ el.style.left = (x+12)+'px'; el.style.top = (y
 
 // removed closeBookingMenu
 
-// Keep reference to student info for tooltip
-let _studentsCache = null;
-function getStudentInfo(code){
-  if (!_studentsCache) return null;
-  return _studentsCache.get(String(code)) || null;
-}
+// No external students cache anymore
 
 // ---------- Init ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -350,8 +350,6 @@ function normalizeTeacherKey(t){
 // Quick client-side render from cached normalized data
 function renderVisibleFromCache(){
   if (!_normalizedCache) return;
-  // Build nameByCode from cached students
-  const nameByCode = _studentsCache ? new Map(Array.from(_studentsCache.values()).map(s => [String(s.Code), String(s.Name||'')])) : new Map();
   // Clear containers
   document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
   const start = currentWeekStart; const end = addDays(start, 6);
@@ -361,8 +359,6 @@ function renderVisibleFromCache(){
     .forEach((ev) => {
       const cell = document.querySelector(`.cal-cell[data-date="${ev.dateIso}"][data-time="${ev.timeHH}"] .slot-bookings`);
       if (!cell) return;
-      // Ensure we have a name
-      if (!ev.name) ev.name = nameByCode.get(ev.code) || '';
       cell.appendChild(buildBookingEl(ev));
     });
 }
@@ -388,7 +384,7 @@ notesModal?.addEventListener('click', (e)=>{ if (e.target === notesModal) closeN
 notesSave?.addEventListener('click', saveNotes);
 
 // ---------- Booking element factory (shared) ----------
-function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
+function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 0, total = 0 }){
   const el = document.createElement('div');
   const tKey = normalizeTeacherKey(teacher);
   el.className = `booking teacher-${tKey}`;
@@ -432,10 +428,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
   el.addEventListener('mouseenter', (ev) => {
     const tip = document.createElement('div');
     tip.className = 'tooltip';
-    const info = getStudentInfo(code);
-    const used = info && isFinite(Number(info.CourseUsed)) ? Number(info.CourseUsed) : 0;
-    const total = info && isFinite(Number(info.CourseTotal)) ? Number(info.CourseTotal) : 0;
-    const remaining = Math.max(0, total - used);
+    const remaining = Math.max(0, Number(total||0) - Number(used||0));
     tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
     document.body.appendChild(tip);
     positionTooltip(tip, ev.clientX, ev.clientY);
