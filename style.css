@@ -1,9 +1,51 @@
 /* Minimal, clean calendar styles */
 :root {
-  --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#f6a32a; --event:#fff3d6;
+  --bg:#fff;
+  --text:#1f2937;
+  --card:#fff;
+  --grid:#e5e7eb;
+  --muted:#6b7280;
+  --accent:#f6a32a;
+  --event:#fff3d6;
+  /* Teacher palette */
+  --t-ton-bg:#f3f4f6;   /* pastel gray */
+  --t-ton-border:#6b7280;
+  --t-boy-bg:#ffe5e5;   /* pastel red */
+  --t-boy-border:#f87171;
+  --t-nueng-bg:#e7f8e7; /* pastel green */
+  --t-nueng-border:#10b981;
+  --t-ek-bg:#ffe1ef;    /* pastel pink */
+  --t-ek-border:#f472b6;
+  --t-others-bg:#ffe9d6;/* pastel orange */
+  --t-others-border:#f59e0b;
 }
-body { font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); margin:16px; }
-h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
+body {
+  font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text);
+  margin:16px;
+  /* Polished subtle background matching warm accent */
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(246,163,42,0.12), transparent 60%),
+    radial-gradient(1000px 500px at 90% 0%, rgba(59,130,246,0.10), transparent 60%),
+    linear-gradient(180deg,#ffffff, #fafafa);
+}
+h1 {
+  text-align:center;
+  font-weight:700;
+  margin:8px 0 16px;
+  letter-spacing:0.2px;
+  color:#0f172a;
+  position:relative;
+}
+h1::after{
+  content:"";
+  display:block;
+  height:6px;
+  width:140px;
+  margin:6px auto 0;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(246,163,42,0.6), rgba(59,130,246,0.35));
+}
 #calendar { max-width:1100px; margin:0 auto; position:relative; }
 .cal-table { position: relative; z-index: 1; }
 .time-gradient-overlay{ position:absolute; pointer-events:none; z-index:0; background:linear-gradient(180deg,#fff6cc 0%, #e6f0ff 100%); border-right:1px solid var(--grid); }
@@ -20,22 +62,60 @@ h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 .dow-4{ background:#ffe9d6; } /* Thursday pastel orange */
 .dow-5{ background:#e6f0ff; } /* Friday pastel blue */
 .dow-6{ background:#efe6ff; } /* Saturday pastel purple */
-.booking{ background:var(--event); border-left:3px solid var(--accent); border-radius:8px; padding:4px 6px; margin:4px 0; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.booking{
+  background:var(--event);
+  border-left:3px solid var(--accent);
+  border-radius:10px;
+  padding:6px 8px;
+  margin:6px 0;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:#0f172a;
+  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(0,0,0,0.05);
+}
+.booking > span{ font-weight:600; }
+.booking.teacher-ton{ background:var(--t-ton-bg); border-left-color:var(--t-ton-border); color:#111827; }
+.booking.teacher-boy{ background:var(--t-boy-bg); border-left-color:var(--t-boy-border); color:#111827; }
+.booking.teacher-nueng{ background:var(--t-nueng-bg); border-left-color:var(--t-nueng-border); color:#0b3d2e; }
+.booking.teacher-ek{ background:var(--t-ek-bg); border-left-color:var(--t-ek-border); color:#111827; }
+.booking.teacher-others{ background:var(--t-others-bg); border-left-color:var(--t-others-border); color:#111827; }
 .booking .leave{ background:var(--accent); color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
 .booking .leave:hover{ filter:brightness(1.05); }
 
 /* Modal */
 .modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:1000; }
 .modal[hidden]{ display:none !important; }
-.modal-card{ width:360px; background:#fff; border:1px solid var(--grid); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); }
+.modal-card{ width:min(420px, calc(100vw - 32px)); background:#fff; border:1px solid var(--grid); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.15); overflow:hidden; }
 .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--grid); background:#fafafa; border-top-left-radius:12px; border-top-right-radius:12px; }
 .modal-title{ font-weight:700; }
 .modal-close{ background:transparent; border:0; font-size:20px; cursor:pointer; }
-.modal-body{ padding:12px; display:grid; gap:8px; }
+.modal-body{ padding:12px; display:grid; gap:10px; box-sizing:border-box; }
 .grid.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.modal-body input, .modal-body select{ padding:8px; border:1px solid var(--grid); border-radius:8px; width:100%; }
-.btn-primary{ background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-weight:700; cursor:pointer; }
-.btn-secondary{ background:#e5e7eb; color:#111827; border:0; border-radius:8px; padding:10px 12px; font-weight:600; cursor:pointer; }
+.modal-body input,
+.modal-body select,
+.modal-body textarea{
+  padding:10px 12px;
+  border:1px solid var(--grid);
+  border-radius:10px;
+  width:100%;
+  box-sizing:border-box;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04) inset;
+}
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus{
+  outline:none;
+  border-color:rgba(246,163,42,0.7);
+  box-shadow:0 0 0 3px rgba(246,163,42,0.15);
+}
+.btn-primary{ background:var(--accent); color:#fff; border:0; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(246,163,42,0.25); }
+.btn-secondary{ background:#e5e7eb; color:#111827; border:0; border-radius:10px; padding:10px 12px; font-weight:600; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+.btn-primary:hover{ filter:brightness(1.05); }
+.btn-secondary:hover{ filter:brightness(0.98); }
 
 /* Notes button */
 .notes-btn{ position:fixed; left:12px; top:12px; background:#111827; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
@@ -54,3 +134,6 @@ h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 
 /* Tooltip */
 .tooltip{ position:absolute; background:#111827; color:#fff; padding:6px 8px; border-radius:6px; font-size:12px; pointer-events:none; z-index:2000; }
+
+/* Ensure inputs inside modals never overflow */
+.modal-card * { min-width:0; }

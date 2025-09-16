@@ -196,7 +196,8 @@ async function loadSchedule() {
         const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
         if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
         const el = document.createElement('div');
-        el.className = 'booking';
+        const tKey = normalizeTeacherKey(teacher);
+        el.className = `booking teacher-${tKey}`;
         el.innerHTML = `<span>(${code}, ${name}, ${teacher})</span>`;
         const btn = document.createElement('button');
         btn.className = 'leave';
@@ -233,10 +234,10 @@ async function loadSchedule() {
           const tip = document.createElement('div');
           tip.className = 'tooltip';
           const info = getStudentInfo(code);
-          const used = (info && Number(info.CourseUsed)) || 0;
-          const total = (info && Number(info.CourseTotal)) || 0;
-          const remaining = total ? Math.max(0, total - used) : 'N/A';
-          tip.textContent = `Used: ${used} | Remaining: ${remaining}`;
+          const used = info && isFinite(Number(info.CourseUsed)) ? Number(info.CourseUsed) : 0;
+          const total = info && isFinite(Number(info.CourseTotal)) ? Number(info.CourseTotal) : 0;
+          const remaining = Math.max(0, total - used);
+          tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
           document.body.appendChild(tip);
           positionTooltip(tip, ev.clientX, ev.clientY);
           el._tip = tip;
@@ -363,3 +364,15 @@ document.addEventListener('DOMContentLoaded', () => {
   try { renderCalendar(); } catch (e) { console.error('renderCalendar error', e); }
   try { loadSchedule(); } catch (e) { console.error('loadSchedule error', e); }
 });
+
+// ---------- Presentation helpers ----------
+function normalizeTeacherKey(t){
+  const s = String(t || '').trim();
+  if (!s) return 'others';
+  if (s.includes('ครูโทน')) return 'ton';
+  if (s.includes('ครูบอย')) return 'boy';
+  if (s.includes('ครูหนึ่ง')) return 'nueng';
+  if (s.includes('ครูเอก')) return 'ek';
+  if (/others/i.test(s) || s.includes('อื่น')) return 'others';
+  return 'others';
+}
