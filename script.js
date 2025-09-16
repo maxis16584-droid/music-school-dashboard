@@ -44,37 +44,76 @@ initTheme();
   }
 })();
 
-// โหลดตารางเรียนจาก schedule sheet
+// โหลดตารางและเรนเดอร์ลงปฏิทิน (React calendar)
 async function loadSchedule() {
   try {
-    const res = await fetch(API_URL + "?sheet=schedule");
-    const data = await res.json();
+    const [scheduleRes, studentsRes] = await Promise.all([
+      fetch(API_URL + "?sheet=schedule", { cache: "no-store" }),
+      fetch(API_URL + "?sheet=students", { cache: "no-store" })
+    ]);
+    const [schedule, students] = await Promise.all([
+      scheduleRes.json(),
+      studentsRes.json()
+    ]);
 
-    let html = "<table>";
-    html += "<tr><th>Date</th><th>Time</th><th>Teacher</th><th>StudentCode</th><th>Status</th><th>Action</th></tr>";
+    const nameByCode = new Map((Array.isArray(students)?students:[]).map(s => [String(s.Code), String(s.Name || '')]));
 
-    data.forEach(row => {
-      html += `
-        <tr>
-          <td>${row.Date}</td>
-          <td>${row.Time}</td>
-          <td>${row.Teacher}</td>
-          <td>${row.StudentCode}</td>
-          <td>${row.Status}</td>
-          <td>
-            <button onclick="leave('${row.Date}','${row.Time}','${row.Teacher}','${row.StudentCode}')">
-              ลา
-            </button>
-          </td>
-        </tr>
-      `;
+    const parseTimeRange = (s) => {
+      const str = String(s || '').trim();
+      const m = str.match(/^(\d{1,2}):(\d{2})(?:\s*-\s*(\d{1,2}):(\d{2}))?/);
+      if (!m) return { sh: 0, sm: 0, eh: null, em: null };
+      const sh = Number(m[1]);
+      const sm = Number(m[2]);
+      const eh = m[3] != null ? Number(m[3]) : null;
+      const em = m[4] != null ? Number(m[4]) : null;
+      return { sh, sm, eh, em };
+    };
+    const toDateRange = (dateStr, timeStr) => {
+      const d = parseDate(dateStr);
+      if (!d) return { start: null, end: null, dateIso: null, timeHH: null };
+      const { sh, sm, eh, em } = parseTimeRange(timeStr);
+      const start = new Date(d); start.setHours(sh, sm, 0, 0);
+      const end = new Date(start);
+      if (eh != null && em != null) end.setHours(eh, em, 0, 0); else end.setHours(start.getHours() + 1);
+      const yyyy = d.getFullYear(); const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0');
+      const dateIso = `${yyyy}-${mm}-${dd}`;
+      const timeHH = String(sh).padStart(2,'0') + ':' + String(sm).padStart(2,'0');
+      return { start, end, dateIso, timeHH };
+    };
+
+    const events = (Array.isArray(schedule) ? schedule : []).map((r, i) => {
+      const { start, end, dateIso, timeHH } = toDateRange(r.Date, r.Time);
+      if (!start) return null;
+      const code = String(r.StudentCode || '');
+      const name = nameByCode.get(code) || '';
+      const teacher = String(r.Teacher || '');
+      return {
+        id: String(i + 1),
+        title: `(${code}, ${name}, ${teacher})`,
+        start,
+        end,
+        _dateIso: dateIso,
+        _timeHH: timeHH
+      };
+    }).filter(Boolean);
+
+    if (window.renderWeeklyCalendar) {
+      window.renderWeeklyCalendar(events, { startHour: 13, endHour: 20 });
+    }
+
+    // Inject plain text into cells via data attributes
+    document.querySelectorAll('.wc-cell [data-injected]').forEach(n => n.remove());
+    events.forEach(ev => {
+      const sel = `.wc-cell[data-date="${ev._dateIso}"][data-time="${ev._timeHH}"]`;
+      const cell = document.querySelector(sel);
+      if (!cell) return;
+      const div = document.createElement('div');
+      div.setAttribute('data-injected','1');
+      div.textContent = ev.title;
+      cell.appendChild(div);
     });
-
-    html += "</table>";
-    document.getElementById("schedule").innerHTML = html;
   } catch (err) {
-    document.getElementById("schedule").innerText = "❌ โหลดข้อมูลไม่สำเร็จ";
-    console.error(err);
+    console.error('loadSchedule error:', err);
   }
 }
 
@@ -101,7 +140,7 @@ async function addStudent(e) {
     const panel = document.getElementById("addStudentPanel");
     if (panel) panel.hidden = true;
     // Refresh calendar after adding
-    renderCalendarFromAPI();
+    loadSchedule();
   } catch (err) {
     console.error("addStudent error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -126,7 +165,7 @@ async function addSchedule(e) {
     await postFormStrict(body);
     alert("เพิ่มตารางเรียนเรียบร้อย ✅");
     document.getElementById("addScheduleForm").reset();
-    renderCalendarFromAPI();
+    loadSchedule();
   } catch (err) {
     console.error("addSchedule error:", err);
     alert(`❌ เกิดข้อผิดพลาด: ${err?.message || err}`);
@@ -251,7 +290,7 @@ function computeNextId(students) {
 }
 
 // First load: calendar only
-renderCalendarFromAPI();
+loadSchedule();
 
 // แสดงตาราง จันทร์-อาทิตย์ จาก schedule sheet พร้อมปุ่มลา
 async function loadWeekSchedule() {

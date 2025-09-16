@@ -90,8 +90,20 @@ function WeeklyCalendar({
             {days.map((dayDate, dayIdx) => {
               const key = `${dayIdx}-${h}`;
               const cellEvents = eventsByDayHour.get(key) || [];
+              const yyyy = dayDate.getFullYear();
+              const mm = String(dayDate.getMonth()+1).padStart(2,'0');
+              const dd = String(dayDate.getDate()).padStart(2,'0');
+              const dateIso = `${yyyy}-${mm}-${dd}`;
+              const timeHH = String(h).padStart(2, '0') + ':00';
               return (
-                <div key={key} className="wc-cell" data-hour={h} onClick={() => onCellClick && onCellClick({ date: dayDate, hour: h })}>
+                <div
+                  key={key}
+                  className="wc-cell"
+                  data-hour={h}
+                  data-date={dateIso}
+                  data-time={timeHH}
+                  onClick={() => onCellClick && onCellClick({ date: dayDate, hour: h })}
+                >
                   {cellEvents.map((ev) => (
                     <div
                       key={ev.id}
