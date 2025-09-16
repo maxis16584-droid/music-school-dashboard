@@ -18,8 +18,6 @@ function startOfWeekMonday(d = new Date()) {
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
-// Use Thai labels with Gregorian year (or swap to 'en-GB'/'en-US' as desired)
-const LABEL_LOCALE = 'th-TH-u-ca-gregory';
 function gregLabel(d){
   return d.toLocaleDateString(LABEL_LOCALE, {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
@@ -144,8 +142,8 @@ async function loadSchedule() {
     // Cache full students map for tooltips
     _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
 
-    // Clear cells
-    document.querySelectorAll('.cal-cell').forEach(cell => cell.innerHTML = '');
+    // Clear only booking containers, keep the "+ Add" buttons and structure
+    document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
 
     // Compute current visible week range (YYYY-MM-DD)
     const start = currentWeekStart;
