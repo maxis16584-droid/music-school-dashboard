@@ -1,6 +1,6 @@
 // Simple weekly calendar using Google Apps Script backend
 // Set your deployed Web App URL here
-const API_URL = 'https://script.google.com/macros/s/AKfycbx9NoS4xBp1D78c5iQSxfLZ23M5SP_tK-BHHQ-tAVs4nWm5lrpZuw_F2lSEx6wTEDMNjg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzUasYkOaD55dHAudRT3M05s3tRHqBWP_PpcorNUl5trjX9pu_dj-3dYLV4w62JL3KvPg/exec';
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
