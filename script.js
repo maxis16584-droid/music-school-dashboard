@@ -1,5 +1,5 @@
 // 👉 ใส่ URL Apps Script Web App ของคุณตรงนี้
-const API_URL = "https://script.google.com/macros/s/AKfycbyxZWJFDyQ0LytU3cbgL9XmrvDVJ09diXaMh8-ZbjhGVIxyb0jEo5zHvKQMdMX_hDda/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzKLA2Okw6qGRHxnroNNtMjyfKugbvQc64Jt1sRmydIupuOKSHTd4iWvz7oyX1w-ZZt/exec";
 
 // ------------------
 // Theme: Light/Dark
