@@ -101,20 +101,31 @@ async function loadSchedule() {
       window.renderWeeklyCalendar(events, { startHour: 13, endHour: 20 });
     }
 
-    // Inject plain text into cells via data attributes
-    document.querySelectorAll('.wc-cell [data-injected]').forEach(n => n.remove());
-    events.forEach(ev => {
-      const sel = `.wc-cell[data-date="${ev._dateIso}"][data-time="${ev._timeHH}"]`;
-      const cell = document.querySelector(sel);
-      if (!cell) return;
-      const div = document.createElement('div');
-      div.setAttribute('data-injected','1');
-      div.textContent = ev.title;
-      cell.appendChild(div);
-    });
+    // Ensure React calendar has rendered, then inject text into cells
+    await nextFrame();
+    await nextFrame();
+    injectEventsIntoCells(events);
   } catch (err) {
     console.error('loadSchedule error:', err);
   }
+}
+
+function injectEventsIntoCells(events) {
+  // Clear previous injected text
+  document.querySelectorAll('.wc-cell [data-injected]').forEach(n => n.remove());
+  (events || []).forEach(ev => {
+    const sel = `.wc-cell[data-date="${ev._dateIso}"][data-time="${ev._timeHH}"]`;
+    const cell = document.querySelector(sel);
+    if (!cell) return;
+    const div = document.createElement('div');
+    div.setAttribute('data-injected','1');
+    div.textContent = ev.title;
+    cell.appendChild(div);
+  });
+}
+
+function nextFrame() {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()));
 }
 
 // ฟังก์ชันเพิ่มนักเรียนใหม่
