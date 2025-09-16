@@ -209,7 +209,6 @@ async function loadSchedule() {
             try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
             catch (err) { btn.disabled = false; alert(`❌ Leave error: ${err?.message || err}`); }
           });
-          catch (err) { alert(`❌ Leave error: ${err?.message || err}`); }
         });
         el.appendChild(btn);
 
