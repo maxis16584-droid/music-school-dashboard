@@ -10,7 +10,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <img src="logo.png" alt="Logo" class="brand-logo" />
   <h1>Music Lessons – Weekly Calendar</h1>
+
+  <!-- Notes trigger -->
+  <button id="notesBtn" class="notes-btn" type="button">📝 Notes</button>
 
   <!-- Calendar Grid -->
   <div id="calendar"></div>
@@ -29,7 +33,14 @@
         </div>
         <div class="grid two">
           <input type="number" id="modalCourseTotal" placeholder="CourseHours (e.g., 10)" min="1" required />
-          <input type="text" id="modalTeacher" placeholder="Teacher" required />
+          <select id="modalTeacher" required>
+            <option value="" disabled selected>เลือกครูผู้สอน</option>
+            <option>ครูโทน🎸🥁</option>
+            <option>ครูบอย🎸</option>
+            <option>ครูหนึ่ง🎤</option>
+            <option>ครูเอก🎹</option>
+            <option>Others🎶</option>
+          </select>
         </div>
         <div class="grid two">
           <input type="text" id="modalDateThai" placeholder="วันที่ (พ.ศ.)" readonly />
@@ -38,6 +49,39 @@
         <input type="hidden" id="modalDate" />
         <button type="submit" class="btn-primary" style="width:100%">Save</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Leave confirm modal -->
+  <div id="leaveModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Confirm Leave</span>
+        <button id="leaveClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to mark this as leave and extend one more session?</p>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button id="leaveCancel" class="btn-secondary" type="button">Cancel</button>
+          <button id="leaveConfirm" class="btn-primary" type="button">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes modal -->
+  <div id="notesModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Notes</span>
+        <button id="notesClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="notesArea" rows="8" style="width:100%; padding:8px; border:1px solid var(--grid); border-radius:8px;" placeholder="Write your reminders here..."></textarea>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+          <button id="notesSave" class="btn-primary" type="button">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 

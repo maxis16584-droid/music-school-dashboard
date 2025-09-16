@@ -1,6 +1,6 @@
 /* Minimal, clean calendar styles */
 :root {
-  --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#1a73e8; --event:#e8f0fe;
+  --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#f6a32a; --event:#fff3d6;
 }
 body { font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); margin:16px; }
 h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
@@ -26,3 +26,22 @@ h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 .grid.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .modal-body input, .modal-body select{ padding:8px; border:1px solid var(--grid); border-radius:8px; width:100%; }
 .btn-primary{ background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-weight:700; cursor:pointer; }
+.btn-secondary{ background:#e5e7eb; color:#111827; border:0; border-radius:8px; padding:10px 12px; font-weight:600; cursor:pointer; }
+
+/* Notes button */
+.notes-btn{ position:fixed; left:12px; top:12px; background:#111827; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
+
+/* Brand logo */
+.brand-logo{ display:block; margin:8px auto 6px; width:140px; height:auto; object-fit:contain; }
+
+/* Add button inside cell */
+.cell-actions{ display:flex; justify-content:flex-end; }
+.add-btn{ background:#10b981; color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
+.slot-bookings{ margin-top:4px; }
+
+/* Booking pop menu */
+.booking-menu{ position:absolute; background:#fff; border:1px solid var(--grid); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15); padding:6px; display:flex; gap:6px; z-index:2000; }
+.booking-menu button{ background:#111827; color:#fff; border:0; border-radius:6px; padding:4px 6px; font-size:12px; cursor:pointer; }
+
+/* Tooltip */
+.tooltip{ position:absolute; background:#111827; color:#fff; padding:6px 8px; border-radius:6px; font-size:12px; pointer-events:none; z-index:2000; }
