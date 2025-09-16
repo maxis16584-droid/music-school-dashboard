@@ -28,6 +28,7 @@ function gregLabel(d){
 
 // ---------- Calendar UI ----------
 let currentWeekStart = startOfWeekMonday(new Date());
+let hasAutoJumped = false;
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
@@ -144,12 +145,10 @@ async function loadSchedule() {
     const startY = ymd(start);
     const endY = ymd(end);
 
+    const normalized = [];
     (schedule||[]).forEach(row => {
       const dateIso = normalizeDateIso(row.Date);
       if (!dateIso) { console.warn('Skip row (bad date):', row); return; }
-
-      // Check within visible week by ISO string bounds
-      if (dateIso < startY || dateIso > endY) return;
 
       const rawTime = normalizeRawTime(row.Time);
       const timeHH = extractStartTimeHH(rawTime);
@@ -157,23 +156,51 @@ async function loadSchedule() {
       const code = String(row.StudentCode || '');
       const teacher = String(row.Teacher || '');
       const name = nameByCode.get(code) || '';
-
-      const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"]`);
-      if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
-      const el = document.createElement('div');
-      el.className = 'booking';
-      el.innerHTML = `<span>(${code}, ${name}, ${teacher})</span>`;
-      const btn = document.createElement('button');
-      btn.className = 'leave';
-      btn.textContent = 'Leave';
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
-        catch (err) { alert(`❌ Leave error: ${err?.message || err}`); }
-      });
-      el.appendChild(btn);
-      cell.appendChild(el);
+      normalized.push({ dateIso, timeHH, rawTime, code, teacher, name, row });
     });
+
+    // Auto-jump to week that has data if current week has none
+    const hasInCurrentWeek = normalized.some(ev => ev.dateIso >= startY && ev.dateIso <= endY);
+    if (!hasInCurrentWeek && normalized.length > 0 && !hasAutoJumped) {
+      // Prefer nearest upcoming date; otherwise use earliest
+      const todayIso = ymd(new Date());
+      let targetDateIso = normalized
+        .filter(ev => ev.dateIso >= todayIso)
+        .map(ev => ev.dateIso)
+        .sort()[0];
+      if (!targetDateIso) {
+        targetDateIso = normalized.map(ev => ev.dateIso).sort()[0];
+      }
+      const targetDate = new Date(targetDateIso);
+      if (!isNaN(targetDate.getTime())) {
+        currentWeekStart = startOfWeekMonday(targetDate);
+        hasAutoJumped = true;
+        renderCalendar();
+        await loadSchedule();
+        return;
+      }
+    }
+
+    // Render only events within current visible week
+    normalized
+      .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
+      .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
+        const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"]`);
+        if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
+        const el = document.createElement('div');
+        el.className = 'booking';
+        el.innerHTML = `<span>(${code}, ${name}, ${teacher})</span>`;
+        const btn = document.createElement('button');
+        btn.className = 'leave';
+        btn.textContent = 'Leave';
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
+          catch (err) { alert(`❌ Leave error: ${err?.message || err}`); }
+        });
+        el.appendChild(btn);
+        cell.appendChild(el);
+      });
   } catch (err) { console.error('loadSchedule error', err); }
 }
 
@@ -225,7 +252,8 @@ function normalizeRawTime(val) {
     const mm = String(val.getMinutes()).padStart(2,'0');
     return `${hh}:${mm}`;
   }
-  return String(val).trim();
+  // Strip common Thai suffixes and spaces
+  return String(val).replace(/น\.|น|โมง|\s+/g,' ').trim();
 }
 
 function extractStartTimeHH(rawTime) {

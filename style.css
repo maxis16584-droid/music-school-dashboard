@@ -1,5 +1,7 @@
-/* Reset to simple calendar theme */
-:root { --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#1a73e8; --event:#e8f0fe; }
+/* Minimal, clean calendar styles */
+:root {
+  --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#1a73e8; --event:#e8f0fe;
+}
 body { font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); margin:16px; }
 h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 #calendar { max-width:1100px; margin:0 auto; }
@@ -13,69 +15,6 @@ h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 .booking .leave{ background:var(--accent); color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
 .booking .leave:hover{ filter:brightness(1.05); }
 
-/* Remove old floating form (replaced by modal) */
-.floating-form__submit {
-  background: linear-gradient(180deg, var(--accent-2), var(--accent));
-  color: #151515;
-  border: 0;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.wc-toolbar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.wc-left, .wc-right { display: flex; gap: 6px; }
-.wc-right { justify-content: end; }
-.wc-title { font-weight: 600; color: var(--wc-text); }
-.wc-btn {
-  background: var(--card);
-  border: 1px solid var(--wc-grid);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.wc-btn:hover { background: var(--wc-hover); }
-.wc-grid {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  grid-auto-rows: 64px;
-  border-top: 1px solid var(--wc-grid);
-  border-left: 1px solid var(--wc-grid);
-  overflow: hidden;
-  border-radius: 8px;
-}
-.wc-header, .wc-hour, .wc-cell {
-  border-right: 1px solid var(--wc-grid);
-  border-bottom: 1px solid var(--wc-grid);
-  padding: 6px;
-}
-.wc-header { position: sticky; top: 0; background: var(--muted); z-index: 1; font-weight: 600; color: var(--wc-text); }
-.wc-day { text-align: center; user-select: none; }
-.wc-corner { background: var(--muted); }
-.wc-hour { font-size: 12px; color: var(--wc-muted); text-align: right; background: var(--card); }
-.wc-cell { position: relative; background: var(--card); }
-.wc-cell:hover { background: var(--wc-hover); }
-.wc-event {
-  font-size: 12px;
-  line-height: 1.2;
-  background: var(--wc-event);
-  color: var(--wc-text);
-  border: 1px solid rgba(0,0,0,0.05);
-  border-left: 3px solid var(--wc-accent);
-  border-radius: 8px;
-  padding: 6px 8px;
-  display: grid;
-  gap: 2px;
-}
-.wc-event-title { font-weight: 600; }
-.wc-event-time { color: var(--wc-muted); font-size: 11px; }
-
 /* Modal */
 .modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:1000; }
 .modal[hidden]{ display:none !important; }
@@ -87,40 +26,3 @@ h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
 .grid.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .modal-body input, .modal-body select{ padding:8px; border:1px solid var(--grid); border-radius:8px; width:100%; }
 .btn-primary{ background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-weight:700; cursor:pointer; }
-  cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-}
-.primary-action:hover { filter: brightness(1.05); }
-.primary-action:active { transform: translateY(1px); }
-
-/* Brand logo at top-right */
-.brand-logo {
-  display: block;
-  margin: 30px auto 8px auto; /* center */
-  width: 180px; /* larger */
-  height: auto;
-  object-fit: contain;
-}
-
-/* Environment warning banner */
-.env-warning {
-  position: sticky;
-  top: 0;
-  background: #ffeb3b;
-  color: #000;
-  padding: 8px 12px;
-  border: 1px solid #e0c300;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  z-index: 1000;
-}
-/* Modal for adding from calendar */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: grid; place-items: start end; padding: 70px 16px 16px 16px; z-index: 1000; }
-.modal[hidden] { display: none !important; }
-.modal-card { width: 340px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 28px var(--shadow); }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--muted); border-top-left-radius: 12px; border-top-right-radius: 12px; }
-.modal-title { font-weight: 700; color: #1a1a1a; }
-.modal-close { background: transparent; border: 0; font-size: 20px; cursor: pointer; color: var(--text); }
-.modal-body { padding: 12px; display: grid; gap: 8px; }
-.modal-body input, .modal-body select { padding: 8px; border: 1px solid var(--border); border-radius: 8px; width: 100%; }
-.grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
