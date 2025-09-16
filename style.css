@@ -86,7 +86,7 @@ h1::after{
 .booking .leave:hover{ filter:brightness(1.05); }
 
 /* Modal */
-.modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:1000; }
+.modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:4000; }
 .modal[hidden]{ display:none !important; }
 .modal-card{ width:min(420px, calc(100vw - 32px)); background:#fff; border:1px solid var(--grid); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.15); overflow:hidden; }
 .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--grid); background:#fafafa; border-top-left-radius:12px; border-top-right-radius:12px; }
@@ -138,5 +138,7 @@ h1::after{
 /* Ensure inputs inside modals never overflow */
 .modal-card * { min-width:0; }
 
-/* Center the leave confirmation modal */
-#leaveModal.modal{ place-items:center; padding:16px; }
+/* Center the modals */
+#leaveModal.modal,
+#addModal.modal,
+#notesModal.modal{ place-items:center; padding:16px; }

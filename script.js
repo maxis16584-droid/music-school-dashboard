@@ -30,6 +30,9 @@ function gregLabel(d){
 let currentWeekStart = startOfWeekMonday(new Date());
 let hasAutoJumped = false;
 let _activeScheduleAbort = null;
+let _scheduleCache = null; // raw schedule array from API
+let _normalizedCache = null; // normalized events for fast re-render
+let _scheduleFetchedAt = 0;
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
@@ -82,16 +85,20 @@ function renderCalendar() {
   container.querySelector('#btnPrev')?.addEventListener('click', async () => {
     currentWeekStart = addDays(currentWeekStart, -7);
     renderCalendar();
+    // Instant render from cache, then refresh from server
+    renderVisibleFromCache();
     await loadSchedule();
   });
   container.querySelector('#btnNext')?.addEventListener('click', async () => {
     currentWeekStart = addDays(currentWeekStart, 7);
     renderCalendar();
+    renderVisibleFromCache();
     await loadSchedule();
   });
   container.querySelector('#btnToday')?.addEventListener('click', async () => {
     currentWeekStart = startOfWeekMonday(new Date());
     renderCalendar();
+    renderVisibleFromCache();
     await loadSchedule();
   });
 }
@@ -150,6 +157,12 @@ async function loadSchedule() {
     // Derive name map from cache
     const nameByCode = new Map(Array.from(_studentsCache.values()).map(s => [String(s.Code), String(s.Name||'')]));
 
+    // If cache is fresh, render from it immediately and skip fetch
+    if (_normalizedCache && (Date.now() - _scheduleFetchedAt) < 15000) {
+      renderVisibleFromCache();
+      return;
+    }
+
     // Fetch schedule (can change frequently)
     const scheduleRes = await fetch(`${API_URL}?sheet=schedule`, { cache:'no-store', signal: ac.signal });
     const schedule = await scheduleRes.json();
@@ -198,6 +211,11 @@ async function loadSchedule() {
         return;
       }
     }
+
+    // Cache latest data and render
+    _scheduleCache = schedule || [];
+    _normalizedCache = normalized;
+    _scheduleFetchedAt = Date.now();
 
     // Render only events within current visible week
     normalized
@@ -347,7 +365,11 @@ leaveConfirmBtn?.addEventListener('click', async ()=>{ if (leaveModal) leaveModa
 leaveCancelBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 leaveCloseBtn?.addEventListener('click', ()=>{ if (leaveModal) leaveModal.hidden = true; leaveCallback = null; });
 
+let _menuDocClickHandler = null;
+let _menuEscHandler = null;
 function showBookingMenu(x,y,onChoose){
+  // Close existing menu if any
+  closeBookingMenu();
   const menu = document.createElement('div');
   menu.className = 'booking-menu';
   const plus = document.createElement('button'); plus.textContent = '+1 hour';
@@ -357,6 +379,16 @@ function showBookingMenu(x,y,onChoose){
   menu.appendChild(minus); menu.appendChild(plus);
   document.body.appendChild(menu);
   menu.style.left = (x+10)+'px'; menu.style.top = (y+10)+'px';
+  menu.addEventListener('click', (e)=> e.stopPropagation());
+
+  // Track active menu and bind outside handlers
+  window._activeBookingMenu = menu;
+  _menuDocClickHandler = (e)=>{ closeBookingMenu(); };
+  _menuEscHandler = (e)=>{ if (e.key === 'Escape') { closeBookingMenu(); } };
+  setTimeout(()=>{ // defer to avoid accidental close from same tick
+    document.addEventListener('click', _menuDocClickHandler, true);
+    document.addEventListener('keydown', _menuEscHandler, true);
+  },0);
 }
 function shiftHour(timeHH, delta){
   const m = String(timeHH).match(/^(\d{1,2}):(\d{2})$/); if (!m) return '';
@@ -364,6 +396,14 @@ function shiftHour(timeHH, delta){
   return `${String(h).padStart(2,'0')}:${m[2]}`;
 }
 function positionTooltip(el,x,y){ el.style.left = (x+12)+'px'; el.style.top = (y+12)+'px'; }
+
+function closeBookingMenu(){
+  const m = window._activeBookingMenu;
+  if (m && m.parentNode) { try { m.parentNode.removeChild(m); } catch {} }
+  window._activeBookingMenu = null;
+  if (_menuDocClickHandler) { document.removeEventListener('click', _menuDocClickHandler, true); _menuDocClickHandler = null; }
+  if (_menuEscHandler) { document.removeEventListener('keydown', _menuEscHandler, true); _menuEscHandler = null; }
+}
 
 // Keep reference to student info for tooltip
 let _studentsCache = null;
@@ -375,6 +415,7 @@ function getStudentInfo(code){
 // ---------- Init ----------
 document.addEventListener('DOMContentLoaded', () => {
   try { renderCalendar(); } catch (e) { console.error('renderCalendar error', e); }
+  try { renderVisibleFromCache(); } catch (e) { /* ignore */ }
   try { loadSchedule(); } catch (e) { console.error('loadSchedule error', e); }
 });
 
@@ -388,6 +429,34 @@ function normalizeTeacherKey(t){
   if (s.includes('ครูเอก')) return 'ek';
   if (/others/i.test(s) || s.includes('อื่น')) return 'others';
   return 'others';
+}
+
+// Quick client-side render from cached normalized data
+function renderVisibleFromCache(){
+  if (!_normalizedCache) return;
+  // Build nameByCode from cached students
+  const nameByCode = _studentsCache ? new Map(Array.from(_studentsCache.values()).map(s => [String(s.Code), String(s.Name||'')])) : new Map();
+  // Clear containers
+  document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
+  const start = currentWeekStart; const end = addDays(start, 6);
+  const startY = ymd(start); const endY = ymd(end);
+  _normalizedCache
+    .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
+    .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
+      const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
+      if (!cell) return;
+      const el = document.createElement('div');
+      const tKey = normalizeTeacherKey(teacher);
+      el.className = `booking teacher-${tKey}`;
+      const resolvedName = name || nameByCode.get(code) || '';
+      el.innerHTML = `<span>(${code}, ${resolvedName}, ${teacher})</span>`;
+      const btn = document.createElement('button');
+      btn.className = 'leave';
+      btn.textContent = 'Leave';
+      btn.addEventListener('click', (e)=> e.stopPropagation()); // disabled in cache render; server actions will come after refresh
+      el.appendChild(btn);
+      cell.appendChild(el);
+    });
 }
 
 // ---------- Notes modal ----------
