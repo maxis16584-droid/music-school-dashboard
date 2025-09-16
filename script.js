@@ -18,8 +18,10 @@ function startOfWeekMonday(d = new Date()) {
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+const DEFAULT_LABEL_LOCALE = 'th-TH-u-ca-gregory';
 function gregLabel(d){
-  return d.toLocaleDateString(LABEL_LOCALE, {
+  const loc = (typeof LABEL_LOCALE !== 'undefined' && LABEL_LOCALE) ? LABEL_LOCALE : DEFAULT_LABEL_LOCALE;
+  return d.toLocaleDateString(loc, {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
   });
 }
