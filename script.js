@@ -4,6 +4,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzXIvC52_mByHpkmmiJct3r
 
 // Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
+// Locale for header labels (Thai names with Gregorian year by default)
+const LABEL_LOCALE = 'th-TH-u-ca-gregory'; // change to 'en-GB' or 'en-US' for English
 const START_HOUR = 13;
 const END_HOUR = 20;
 
@@ -18,8 +20,6 @@ function startOfWeekMonday(d = new Date()) {
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
-// Use Thai labels with Gregorian year (or swap to 'en-GB'/'en-US' as desired)
-const LABEL_LOCALE = 'th-TH-u-ca-gregory';
 function gregLabel(d){
   return d.toLocaleDateString(LABEL_LOCALE, {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
@@ -144,8 +144,8 @@ async function loadSchedule() {
     // Cache full students map for tooltips
     _studentsCache = new Map((students||[]).map(s => [String(s.Code), s]));
 
-    // Clear cells
-    document.querySelectorAll('.cal-cell').forEach(cell => cell.innerHTML = '');
+    // Clear only booking containers, keep the "+ Add" button and structure
+    document.querySelectorAll('.cal-cell .slot-bookings').forEach(box => box.innerHTML = '');
 
     // Compute current visible week range (YYYY-MM-DD)
     const start = currentWeekStart;
@@ -209,7 +209,6 @@ async function loadSchedule() {
             try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
             catch (err) { btn.disabled = false; alert(`❌ Leave error: ${err?.message || err}`); }
           });
-          catch (err) { alert(`❌ Leave error: ${err?.message || err}`); }
         });
         el.appendChild(btn);
 
