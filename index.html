@@ -3,30 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Music School Dashboard</title>
+  <title>Music Lessons Calendar</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-  <!-- React + ReactDOM + Babel (for JSX in-browser) -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body>
-  <div id="envWarning" class="env-warning" hidden></div>
-  <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">Dark</button>
-  <img src="logo.png" alt="Music Corner logo" class="brand-logo" title="Music Corner" />
-  <h1>Music School Dashboard</h1>
+  <h1>Music Lessons – Weekly Calendar</h1>
 
-  <!-- React Weekly Calendar -->
-  <div id="calendar-root" class="calendar-root"></div>
+  <!-- Calendar Grid -->
+  <div id="calendar"></div>
 
-  <!-- Modal Add Student (open by clicking a calendar cell) -->
+  <!-- Add Booking Modal -->
   <div id="addModal" class="modal" hidden>
     <div class="modal-card">
       <div class="modal-header">
-        <span class="modal-title">Add Student</span>
+        <span class="modal-title">Add Booking</span>
         <button id="modalClose" class="modal-close" aria-label="Close">×</button>
       </div>
       <form id="modalForm" class="modal-body">
@@ -35,28 +28,19 @@
           <input type="text" id="modalName" placeholder="Student Name" required />
         </div>
         <div class="grid two">
-          <input type="number" id="modalCourseTotal" placeholder="Course Total (4,8,20)" required />
-          <select id="modalTeacher" required>
-            <option value="" disabled selected>เลือกครูผู้สอน</option>
-            <option value="พี่โทน">พี่โทน</option>
-            <option value="พี่หนึ่ง">พี่หนึ่ง</option>
-            <option value="พี่เอก">พี่เอก</option>
-            <option value="พี่บอย">พี่บอย</option>
-            <option value="Others">Others</option>
-          </select>
+          <input type="number" id="modalCourseTotal" placeholder="CourseHours (e.g., 10)" min="1" required />
+          <input type="text" id="modalTeacher" placeholder="Teacher" required />
         </div>
         <div class="grid two">
           <input type="text" id="modalDateThai" placeholder="วันที่ (พ.ศ.)" readonly />
           <input type="text" id="modalTime" placeholder="Time (HH:mm)" readonly />
         </div>
         <input type="hidden" id="modalDate" />
-        <button type="submit" class="floating-form__submit" style="width:100%">Save</button>
+        <button type="submit" class="btn-primary" style="width:100%">Save</button>
       </form>
     </div>
   </div>
 
-
   <script src="script.js"></script>
-  <script type="text/babel" src="weekly-calendar.jsx"></script>
 </body>
 </html>

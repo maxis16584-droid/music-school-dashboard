@@ -1,78 +1,17 @@
-:root {
-  /* Brand (light-ish) */
-  --bg: #fffaf3;
-  --text: #1a1a1a;
-  --card: #ffffff;
-  --muted: #fff3d6; /* pale amber */
-  --border: #ffd97a;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --accent: #f6a32a; /* logo orange */
-  --accent-2: #ffd84d; /* logo yellow */
-  --btn-bg: var(--accent);
-  --btn-text: #151515;
-}
-
-:root.dark {
-  /* Brand (dark) */
-  --bg: #0e0e10;
-  --text: #f5f7fa;
-  --card: #16181d;
-  --muted: #1f232a;
-  --border: #2a2f36;
-  --shadow: rgba(0, 0, 0, 0.45);
-  --accent: #f6a32a;
-  --accent-2: #ffd84d;
-  --btn-bg: var(--accent);
-  --btn-text: #0e0e10;
-}
-
-body {
-  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: var(--bg);
-  margin: 20px;
-  color: var(--text);
-}
-
-h1, h2 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: var(--accent);
-}
-
-#schedule {
-  margin-bottom: 30px;
-  overflow-x: auto;
-}
-
-.controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  margin: 10px 0 6px 0;
-}
-
-/* Weekly Calendar (React) */
-:root {
-  --wc-bg: var(--card);
-  --wc-grid: var(--border);
-  --wc-text: var(--text);
-  --wc-muted: #6b7280;
-  --wc-accent: var(--accent);
-  --wc-event: rgba(246,163,42,0.18);
-  --wc-hover: rgba(255,216,77,0.18);
-  --wc-shadow: var(--shadow);
-}
-
-.calendar-root { margin: 12px auto; max-width: 1100px; }
-
-.wc-container {
-  background: var(--wc-bg);
-  color: var(--wc-text);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--wc-shadow);
-  padding: 12px;
-}
+/* Reset to simple calendar theme */
+:root { --bg:#fff; --text:#1f2937; --card:#fff; --grid:#e5e7eb; --muted:#6b7280; --accent:#1a73e8; --event:#e8f0fe; }
+body { font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); margin:16px; }
+h1 { text-align:center; font-weight:700; margin:8px 0 16px; }
+#calendar { max-width:1100px; margin:0 auto; }
+.cal-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+.cal-table th,.cal-table td{ border:1px solid var(--grid); vertical-align:top; }
+.cal-table thead th{ position:sticky; top:0; background:#fafafa; z-index:1; padding:8px; font-weight:600; }
+.cal-time{ width:72px; font-size:12px; color:var(--muted); background:#fbfbfb; text-align:right; padding:6px; }
+.cal-cell{ height:66px; padding:6px; cursor:pointer; }
+.cal-cell:hover{ background:#f8fafc; }
+.booking{ background:var(--event); border-left:3px solid var(--accent); border-radius:8px; padding:4px 6px; margin:4px 0; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.booking .leave{ background:var(--accent); color:#fff; border:0; border-radius:6px; padding:2px 6px; font-size:11px; cursor:pointer; }
+.booking .leave:hover{ filter:brightness(1.05); }
 
 /* Remove old floating form (replaced by modal) */
 .floating-form__submit {
@@ -137,87 +76,17 @@ h1, h2 {
 .wc-event-title { font-weight: 600; }
 .wc-event-time { color: var(--wc-muted); font-size: 11px; }
 
-/* Injected plain labels + leave button */
-.wc-inline { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--card); border: 1px dashed var(--wc-grid); border-radius: 6px; padding: 2px 6px; margin-top: 4px; }
-.wc-inline .wc-leave { background: var(--accent); color: var(--btn-text); border: 0; border-radius: 6px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
-.wc-inline .wc-leave:hover { filter: brightness(1.05); }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px auto;
-  background: var(--card);
-  box-shadow: 0 2px 6px var(--shadow);
-}
-
-th, td {
-  border: 1px solid var(--border);
-  padding: 8px;
-  text-align: center;
-}
-
-th {
-  background: var(--muted);
-  color: #1a1a1a;
-}
-
-button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.8;
-}
-
-form {
-  margin: 20px auto;
-  padding: 15px;
-  background: var(--card);
-  border-radius: 8px;
-  box-shadow: 0 2px 6px var(--shadow);
-  max-width: 600px;
-  text-align: center;
-}
-
-form input, form select {
-  padding: 8px;
-  margin: 5px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-form button {
-  background: var(--btn-bg);
-  color: var(--btn-text);
-}
-
-/* Theme toggle button */
-.theme-toggle {
-  position: fixed;
-  top: 16px;
-  left: 16px; /* move to top-left */
-  padding: 6px 10px;
-  background: var(--accent);
-  color: var(--btn-text);
-  border: 1px solid transparent;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px var(--shadow);
-}
-
-/* Primary action button (top-right) */
-.primary-action {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  padding: 8px 14px;
-  background: linear-gradient(180deg, var(--accent-2), var(--accent));
-  color: #151515;
-  font-weight: 700;
-  border: 0;
-  border-radius: 10px;
+/* Modal */
+.modal{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:start end; padding:70px 16px 16px; z-index:1000; }
+.modal[hidden]{ display:none !important; }
+.modal-card{ width:360px; background:#fff; border:1px solid var(--grid); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--grid); background:#fafafa; border-top-left-radius:12px; border-top-right-radius:12px; }
+.modal-title{ font-weight:700; }
+.modal-close{ background:transparent; border:0; font-size:20px; cursor:pointer; }
+.modal-body{ padding:12px; display:grid; gap:8px; }
+.grid.two{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.modal-body input, .modal-body select{ padding:8px; border:1px solid var(--grid); border-radius:8px; width:100%; }
+.btn-primary{ background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-weight:700; cursor:pointer; }
   cursor: pointer;
   box-shadow: 0 6px 14px rgba(0,0,0,0.15);
 }
