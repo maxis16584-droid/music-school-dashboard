@@ -3,7 +3,7 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxRJOcKdTcv8Sae6HSuUTcySlNlZu-UmDE6DjvuSKuBhyZAFk_I-0jsibJnTyuAo-p3/exec';
 
 // Locale/Timezone for display
-const LOCALE = 'th-TH-u-ca-buddhist';
+const LOCALE = 'th-TH-u-ca-gregory';
 const TIME_ZONE = 'Asia/Bangkok';
 const START_HOUR = 13;
 const END_HOUR = 20;
@@ -28,8 +28,9 @@ function renderCalendar() {
   const weekStart = currentWeekStart;
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
-  const startLabel = days[0].toLocaleDateString(LOCALE, { year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
-  const endLabel = days[6].toLocaleDateString(LOCALE, { year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
+  // Use explicit Gregorian YYYY-MM-DD labels
+  const startLabel = ymd(days[0]);
+  const endLabel = ymd(days[6]);
 
   let html = '';
   html += `<div class="cal-nav" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 8px;">
@@ -43,7 +44,7 @@ function renderCalendar() {
 
   html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
   days.forEach(d => {
-    const label = d.toLocaleDateString(LOCALE, { weekday:'short', year:'numeric', month:'short', day:'numeric', timeZone: TIME_ZONE });
+    const label = ymd(d); // YYYY-MM-DD
     html += `<th>${label}</th>`;
   });
   html += '</tr></thead><tbody>';
@@ -97,11 +98,8 @@ function openAddModal(dateIso, timeHH) {
   const yyyy = d.getFullYear();
   document.getElementById('modalDate').value = `${yyyy}-${mm}-${dd}`;
   document.getElementById('modalTime').value = timeHH;
-  try {
-    document.getElementById('modalDateThai').value = d.toLocaleDateString(LOCALE, { year:'numeric', month:'long', day:'numeric', timeZone: TIME_ZONE });
-  } catch (_) {
-    document.getElementById('modalDateThai').value = `${dd}/${mm}/${yyyy+543}`;
-  }
+  // Show Gregorian YYYY-MM-DD in the visible field as well
+  document.getElementById('modalDateThai').value = ymd(d);
   modalEl.hidden = false;
 }
 modalClose?.addEventListener('click', () => modalEl.hidden = true);
