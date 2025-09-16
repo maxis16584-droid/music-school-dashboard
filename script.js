@@ -220,62 +220,11 @@ async function loadSchedule() {
     // Render only events within current visible week
     normalized
       .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
-      .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
+      .forEach((ev) => {
+        const { dateIso, timeHH } = ev;
         const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
-        if (!cell) { console.warn('No matching cell for', dateIso, timeHH, row); return; }
-        const el = document.createElement('div');
-        const tKey = normalizeTeacherKey(teacher);
-        el.className = `booking teacher-${tKey}`;
-        el.innerHTML = `<span>(${code}, ${name}, ${teacher})</span>`;
-        const btn = document.createElement('button');
-        btn.className = 'leave';
-        btn.textContent = 'Leave';
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          // Confirm leave once per booking
-          openLeaveConfirm(async () => {
-            btn.disabled = true;
-            try { await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code }); await loadSchedule(); }
-            catch (err) { btn.disabled = false; alert(`❌ Leave error: ${err?.message || err}`); }
-          });
-        });
-        el.appendChild(btn);
-
-        // Booking time adjust menu on click (popover)
-        el.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          showBookingMenu(ev.clientX, ev.clientY, async (delta) => {
-            const newStart = shiftHour(timeHH, delta);
-            if (!newStart) return;
-            try {
-              // Requires server support: action=moveBooking
-              await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime: newStart, teacher, studentCode: code });
-              await loadSchedule();
-            } catch (err) {
-              alert('Server does not support moveBooking yet. Please update Apps Script.');
-            }
-          });
-        });
-
-        // Tooltip on hover
-        el.addEventListener('mouseenter', (ev) => {
-          const tip = document.createElement('div');
-          tip.className = 'tooltip';
-          const info = getStudentInfo(code);
-          const used = info && isFinite(Number(info.CourseUsed)) ? Number(info.CourseUsed) : 0;
-          const total = info && isFinite(Number(info.CourseTotal)) ? Number(info.CourseTotal) : 0;
-          const remaining = Math.max(0, total - used);
-          tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
-          document.body.appendChild(tip);
-          positionTooltip(tip, ev.clientX, ev.clientY);
-          el._tip = tip;
-        });
-        el.addEventListener('mousemove', (ev) => {
-          if (el._tip) positionTooltip(el._tip, ev.clientX, ev.clientY);
-        });
-        el.addEventListener('mouseleave', () => {
-          if (el._tip) { el._tip.remove(); el._tip = null; }
-        });
+        if (!cell) { console.warn('No matching cell for', dateIso, timeHH, ev.row); return; }
+        const el = buildBookingEl(ev);
         cell.appendChild(el);
       });
   } catch (err) {
@@ -442,20 +391,12 @@ function renderVisibleFromCache(){
   const startY = ymd(start); const endY = ymd(end);
   _normalizedCache
     .filter(ev => ev.dateIso >= startY && ev.dateIso <= endY)
-    .forEach(({ dateIso, timeHH, rawTime, code, teacher, name, row }) => {
-      const cell = document.querySelector(`.cal-cell[data-date="${dateIso}"][data-time="${timeHH}"] .slot-bookings`);
+    .forEach((ev) => {
+      const cell = document.querySelector(`.cal-cell[data-date="${ev.dateIso}"][data-time="${ev.timeHH}"] .slot-bookings`);
       if (!cell) return;
-      const el = document.createElement('div');
-      const tKey = normalizeTeacherKey(teacher);
-      el.className = `booking teacher-${tKey}`;
-      const resolvedName = name || nameByCode.get(code) || '';
-      el.innerHTML = `<span>(${code}, ${resolvedName}, ${teacher})</span>`;
-      const btn = document.createElement('button');
-      btn.className = 'leave';
-      btn.textContent = 'Leave';
-      btn.addEventListener('click', (e)=> e.stopPropagation()); // disabled in cache render; server actions will come after refresh
-      el.appendChild(btn);
-      cell.appendChild(el);
+      // Ensure we have a name
+      if (!ev.name) ev.name = nameByCode.get(ev.code) || '';
+      cell.appendChild(buildBookingEl(ev));
     });
 }
 
@@ -478,3 +419,61 @@ notesBtn?.addEventListener('click', openNotes);
 notesClose?.addEventListener('click', closeNotes);
 notesModal?.addEventListener('click', (e)=>{ if (e.target === notesModal) closeNotes(); });
 notesSave?.addEventListener('click', saveNotes);
+
+// ---------- Booking element factory (shared) ----------
+function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name }){
+  const el = document.createElement('div');
+  const tKey = normalizeTeacherKey(teacher);
+  el.className = `booking teacher-${tKey}`;
+  el.innerHTML = `<span>(${code}, ${name || ''}, ${teacher})</span>`;
+
+  const btn = document.createElement('button');
+  btn.className = 'leave';
+  btn.textContent = 'Leave';
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    openLeaveConfirm(async () => {
+      btn.disabled = true;
+      try {
+        await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher, studentCode: code });
+        await loadSchedule();
+      } catch (err) {
+        btn.disabled = false;
+        alert(`❌ Leave error: ${err?.message || err}`);
+      }
+    });
+  });
+  el.appendChild(btn);
+
+  el.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    showBookingMenu(ev.clientX, ev.clientY, async (delta) => {
+      const newStart = shiftHour(timeHH, delta);
+      if (!newStart) return;
+      try {
+        await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime: newStart, teacher, studentCode: code });
+        await loadSchedule();
+      } catch (err) {
+        alert('Server does not support moveBooking yet. Please update Apps Script.');
+      }
+    });
+  });
+
+  // Tooltip
+  el.addEventListener('mouseenter', (ev) => {
+    const tip = document.createElement('div');
+    tip.className = 'tooltip';
+    const info = getStudentInfo(code);
+    const used = info && isFinite(Number(info.CourseUsed)) ? Number(info.CourseUsed) : 0;
+    const total = info && isFinite(Number(info.CourseTotal)) ? Number(info.CourseTotal) : 0;
+    const remaining = Math.max(0, total - used);
+    tip.textContent = `Remaining: ${remaining}, Used: ${used}`;
+    document.body.appendChild(tip);
+    positionTooltip(tip, ev.clientX, ev.clientY);
+    el._tip = tip;
+  });
+  el.addEventListener('mousemove', (ev) => { if (el._tip) positionTooltip(el._tip, ev.clientX, ev.clientY); });
+  el.addEventListener('mouseleave', () => { if (el._tip) { el._tip.remove(); el._tip = null; } });
+
+  return el;
+}
