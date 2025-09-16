@@ -2,8 +2,7 @@
 // Set your deployed Web App URL here
 const API_URL = 'https://script.google.com/macros/s/AKfycbxRJOcKdTcv8Sae6HSuUTcySlNlZu-UmDE6DjvuSKuBhyZAFk_I-0jsibJnTyuAo-p3/exec';
 
-// Locale/Timezone for display
-const LOCALE = 'th-TH-u-ca-gregory';
+// Timezone for display (dates rendered manually in Gregorian)
 const TIME_ZONE = 'Asia/Bangkok';
 const START_HOUR = 13;
 const END_HOUR = 20;
@@ -19,6 +18,9 @@ function startOfWeekMonday(d = new Date()) {
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function ymd(d) { const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+function weekdayShort(d){ return d.toLocaleString('en-US', { weekday:'short' }); }
+function monthShort(d){ return d.toLocaleString('en-US', { month:'short' }); }
+function gregLabel(d){ const dd = String(d.getDate()).padStart(2,'0'); return `${weekdayShort(d)}, ${dd} ${monthShort(d)} ${d.getFullYear()}`; }
 
 // ---------- Calendar UI ----------
 let currentWeekStart = startOfWeekMonday(new Date());
@@ -28,9 +30,9 @@ function renderCalendar() {
   const weekStart = currentWeekStart;
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
-  // Use explicit Gregorian YYYY-MM-DD labels
-  const startLabel = ymd(days[0]);
-  const endLabel = ymd(days[6]);
+  // Week range label in Gregorian, e.g., Mon, 15 Sep 2025 – Sun, 21 Sep 2025
+  const startLabel = gregLabel(days[0]);
+  const endLabel = gregLabel(days[6]);
 
   let html = '';
   html += `<div class="cal-nav" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 8px;">
@@ -43,10 +45,7 @@ function renderCalendar() {
   </div>`;
 
   html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
-  days.forEach(d => {
-    const label = ymd(d); // YYYY-MM-DD
-    html += `<th>${label}</th>`;
-  });
+  days.forEach(d => { html += `<th>${gregLabel(d)}</th>`; });
   html += '</tr></thead><tbody>';
 
   for (let h = START_HOUR; h <= END_HOUR; h++) {
