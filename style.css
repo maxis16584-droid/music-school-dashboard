@@ -37,6 +37,28 @@ body {
   background-attachment: fixed, fixed;
   min-height: 100vh;
 }
+.page-shell{
+  width:min(1120px, 100%);
+  margin:0 auto;
+  padding:24px 16px 96px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+.hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  text-align:center;
+}
+.main-content{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+.calendar-section{ position:relative; }
 h1 {
   text-align:center;
   font-weight:700;
@@ -48,10 +70,14 @@ h1 {
 /* Gradient divider + slogan just under h1 */
 .header-divider{ height:2px; width:min(720px, 92%); margin:8px auto 4px; border-radius:999px; background:linear-gradient(90deg,#FFA500,#FFD700); }
 .slogan{ text-align:center; color:#6b7280; margin:4px 0 12px; font-size:clamp(12px, 1.8vw, 14px); }
-#calendar { max-width:1400px; margin:12px auto 24px; position:relative; padding:16px; background:#ffffff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.12); }
+.cal-nav{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:4px 4px 0; }
+.cal-nav__buttons{ display:flex; gap:8px; flex-wrap:wrap; }
+.cal-nav__range{ font-weight:600; color:#0f172a; }
+#calendar { width:100%; margin:0; position:relative; padding:16px; background:#ffffff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.12); display:flex; flex-direction:column; gap:16px; }
+.cal-table-wrap{ overflow-x:auto; overflow-y:hidden; border-radius:12px; border:1px solid var(--grid); background:#fff; }
 .cal-table { position: relative; z-index: 1; }
 .time-gradient-overlay{ position:absolute; pointer-events:none; z-index:0; background:linear-gradient(180deg,#fff6cc 0%, #e6f0ff 100%); border-right:1px solid var(--grid); }
-.cal-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; border:1px solid var(--grid); }
+.cal-table { width:100%; min-width:720px; border-collapse:separate; border-spacing:0; table-layout:fixed; background:#fff; border-radius:12px; overflow:hidden; border:0; }
 .cal-table th,.cal-table td{ border:1px solid var(--grid); vertical-align:top; }
 .cal-table thead th{ position:sticky; top:0; background:#fff4df; z-index:1; padding:12px; font-weight:600; color:var(--accent); font-size:14px; }
 .cal-table thead th:first-child{ border-top-left-radius:12px; }
@@ -164,6 +190,29 @@ body::after{
 }
 
 /* Responsive tweaks */
-@media (max-width: 640px){
-  #calendar{ margin:12px 8px 24px; border-radius:14px; box-shadow:0 10px 24px rgba(0,0,0,0.12); }
+@media (max-width: 1024px){
+  body{ background-attachment: scroll, scroll; }
+  .page-shell{ padding:20px 14px 84px; }
+  #calendar{ padding:14px; border-radius:14px; }
+  .cal-nav__range{ font-size:clamp(14px, 2.8vw, 16px); }
+}
+@media (max-width: 768px){
+  .cal-nav{ flex-direction:column; align-items:stretch; gap:16px; padding:0; }
+  .cal-nav__buttons{ justify-content:center; }
+  .cal-nav__range{ text-align:center; }
+  .cal-table-wrap{ border-radius:14px; }
+  #calendar{ box-shadow:0 10px 24px rgba(0,0,0,0.12); }
+}
+@media (max-width: 600px){
+  .hero{ gap:10px; }
+  h1{ font-size:clamp(22px, 6vw, 26px); }
+  .slogan{ font-size:clamp(12px, 3.2vw, 14px); }
+  .notes-btn{ left:auto; right:16px; top:auto; bottom:18px; transform:none; border-radius:999px; padding:10px 16px; box-shadow:0 10px 20px rgba(0,0,0,0.18); }
+  .cal-nav__buttons{ gap:10px; }
+  .cal-nav__buttons .btn-primary{ flex:1 1 32%; min-width:120px; }
+}
+@media (max-width: 480px){
+  #calendar{ padding:12px; }
+  .btn-primary, .btn-secondary{ padding:8px 12px; font-size:14px; }
+  .cal-table { min-width:640px; }
 }

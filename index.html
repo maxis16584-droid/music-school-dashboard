@@ -10,16 +10,24 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <img src="logo.png" alt="Logo" class="brand-logo" />
-  <h1>Music Lessons – Weekly Calendar</h1>
-  <div class="header-divider" aria-hidden="true"></div>
-  <p class="slogan">"Learn. Play. Enjoy. Music made simple."</p>
-
   <!-- Notes trigger -->
   <button id="notesBtn" class="notes-btn" type="button">📝 Notes</button>
 
-  <!-- Calendar Grid -->
-  <div id="calendar"></div>
+  <div class="page-shell">
+    <header class="hero">
+      <img src="logo.png" alt="Logo" class="brand-logo" />
+      <h1>Music Lessons – Weekly Calendar</h1>
+      <div class="header-divider" aria-hidden="true"></div>
+      <p class="slogan">"Learn. Play. Enjoy. Music made simple."</p>
+    </header>
+
+    <!-- Calendar Grid -->
+    <main class="main-content">
+      <section class="calendar-section">
+        <div id="calendar"></div>
+      </section>
+    </main>
+  </div>
 
   <!-- Add Booking Modal -->
   <div id="addModal" class="modal" hidden>

@@ -49,16 +49,16 @@ function renderCalendar() {
   const endLabel = gregLabel(days[6]);
 
   let html = '';
-  html += `<div class="cal-nav" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 8px;">
-    <div style="display:flex;gap:6px;">
+  html += `<div class="cal-nav">
+    <div class="cal-nav__buttons">
       <button id="btnPrev" class="btn-primary" type="button">◀ Prev</button>
       <button id="btnToday" class="btn-primary" type="button">This week</button>
       <button id="btnNext" class="btn-primary" type="button">Next ▶</button>
     </div>
-    <div style="font-weight:600;">${startLabel} – ${endLabel}</div>
+    <div class="cal-nav__range" aria-live="polite">${startLabel} – ${endLabel}</div>
   </div>`;
 
-  html += '<table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
+  html += '<div class="cal-table-wrap"><table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
   days.forEach(d => { const dIso = ymd(d); const isToday = (dIso === todayIso); html += `<th data-date="${dIso}"${isToday ? ' class="is-today"' : ''}>${gregLabel(d)}</th>`; });
   html += '</tr></thead><tbody>';
 
@@ -76,7 +76,7 @@ function renderCalendar() {
     });
     html += '</tr>';
   }
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   container.innerHTML = html;
 
   // Index cells for O(1) lookup during rendering
