@@ -37,6 +37,24 @@ let _cacheFrom = null;
 let _cacheTo = null;
 // Fast lookup for calendar cells (key: `${dateIso}|${timeHH}` -> `.slot-bookings` element)
 let _cellMap = null;
+let _loadingCount = 0;
+let _cacheDirty = true;
+
+function beginLoading(){
+  _loadingCount += 1;
+  updateSpinnerVisibility();
+}
+function endLoading(){
+  if (_loadingCount > 0) _loadingCount -= 1;
+  updateSpinnerVisibility();
+}
+function updateSpinnerVisibility(){
+  const spinner = document.getElementById('loadingSpinner');
+  if (!spinner) return;
+  spinner.hidden = _loadingCount <= 0;
+}
+
+function markCacheDirty(){ _cacheDirty = true; }
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
@@ -156,17 +174,18 @@ modalForm?.addEventListener('submit', async (e) => {
     await postFormStrict({ action:'addBooking', studentCode: code, studentName: name, teacher, courseHours: total, courseTotal: total, date: dateStr, time: timeStr });
     modalEl.hidden = true; modalForm.reset();
     showToast('บันทึกสำเร็จ');
+    markCacheDirty();
     await loadSchedule();
   } catch (err) { alert(`❌ Error: ${err?.message || err}`); }
 });
 
 // ---------- Data rendering ----------
 async function loadSchedule() {
+  let spinnerStarted = false;
   try {
     // Abort any in-flight schedule request to keep UI snappy on fast nav
     if (_activeScheduleAbort) { try { _activeScheduleAbort.abort(); } catch {} }
-    const ac = new AbortController();
-    _activeScheduleAbort = ac;
+    _activeScheduleAbort = null;
 
     // Compute visible week range (YYYY-MM-DD)
     const visStart = currentWeekStart;
@@ -181,9 +200,26 @@ async function loadSchedule() {
       renderVisibleFromCache();
     }
 
-    // Prefetch one week before and after for instant nav
-    const preFrom = ymd(addDays(visStart, -7));
-    const preTo = ymd(addDays(visEnd, 7));
+    // Prefetch 5 days before and 15 days after for instant nav
+    const preFrom = ymd(addDays(visStart, -5));
+    const preTo = ymd(addDays(visEnd, 15));
+
+    const needsFetch =
+      _cacheDirty ||
+      !_normalizedCache ||
+      !_cacheFrom || !_cacheTo ||
+      preFrom < _cacheFrom ||
+      preTo > _cacheTo;
+
+    if (!needsFetch) {
+      return;
+    }
+
+    beginLoading();
+    spinnerStarted = true;
+
+    const ac = new AbortController();
+    _activeScheduleAbort = ac;
     let schedule = [];
     try {
       const scheduleRes = await fetch(`${API_URL}?sheet=schedule&from=${encodeURIComponent(preFrom)}&to=${encodeURIComponent(preTo)}`, { cache:'no-store', signal: ac.signal });
@@ -241,10 +277,13 @@ async function loadSchedule() {
 
     // Cache latest data and render
     _scheduleCache = schedule || [];
-    _normalizedCache = normalized;
+    const prevCache = Array.isArray(_normalizedCache) ? _normalizedCache : [];
+    const preserved = prevCache.filter(ev => ev.dateIso < preFrom || ev.dateIso > preTo);
+    _normalizedCache = preserved.concat(normalized);
     _scheduleFetchedAt = Date.now();
-    _cacheFrom = preFrom;
-    _cacheTo = preTo;
+    _cacheFrom = (!_cacheFrom || preFrom < _cacheFrom) ? preFrom : _cacheFrom;
+    _cacheTo = (!_cacheTo || preTo > _cacheTo) ? preTo : _cacheTo;
+    _cacheDirty = false;
 
     // Render only events within current visible week (batch by cell to reduce reflows)
     const groups = new Map(); // key -> array of events
@@ -265,6 +304,9 @@ async function loadSchedule() {
   } catch (err) {
     if (err?.name === 'AbortError') return; // ignore aborted fetches
     console.error('loadSchedule error', err);
+  } finally {
+    _activeScheduleAbort = null;
+    if (spinnerStarted) endLoading();
   }
 }
 
@@ -462,6 +504,7 @@ function buildBookingEl({ dateIso, timeHH, rawTime, code, teacher, name, used = 
         const parent = el.parentNode; if (parent) parent.removeChild(el);
         const res = await postFormStrict({ action:'leave', date: dateIso, time: rawTime, teacher: normalizeTeacherLabelClient(teacher), studentCode: code });
         showToast('ทำการลาแล้ว ลบกล่อง และเพิ่มรอบใหม่แล้ว');
+        markCacheDirty();
         await loadSchedule();
       } catch (err) {
         btn.disabled = false;
@@ -541,6 +584,7 @@ moveForm?.addEventListener('submit', async (e) => {
     await postFormStrict({ action:'moveBooking', date: dateIso, time: rawTime, newTime, teacher: normalizeTeacherLabelClient(teacher), studentCode: code });
     showToast('ย้ายเวลาเรียบร้อย');
     closeMoveModal();
+    markCacheDirty();
     await loadSchedule();
   } catch (err) {
     alert(`❌ Move error: ${err?.message || err}`);
