@@ -26,6 +26,10 @@
       <h1>Music Lessons – Weekly Calendar</h1>
       <div class="header-divider" aria-hidden="true"></div>
       <p class="slogan">"Learn. Play. Enjoy. Music made simple."</p>
+      <div class="hero-actions" role="group" aria-label="ข้อมูลสรุป">
+        <button id="studentsBtn" class="btn-utility" type="button">👩‍🎓 Students</button>
+        <button id="teachersBtn" class="btn-utility" type="button">👨‍🏫 Teachers</button>
+      </div>
     </header>
 
     <!-- Calendar Grid -->
@@ -121,6 +125,28 @@
         <input type="hidden" id="moveRawTime" />
         <button type="submit" class="btn-primary" style="width:100%">Confirm Move</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Students overview modal -->
+  <div id="studentsModal" class="modal" hidden>
+    <div class="modal-card data-modal data-modal--students">
+      <div class="modal-header">
+        <span class="modal-title">Students Overview</span>
+        <button id="studentsClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <div id="studentsContent" class="modal-body data-modal__body"></div>
+    </div>
+  </div>
+
+  <!-- Teachers overview modal -->
+  <div id="teachersModal" class="modal" hidden>
+    <div class="modal-card data-modal data-modal--teachers">
+      <div class="modal-header">
+        <span class="modal-title">Teachers Overview</span>
+        <button id="teachersClose" class="modal-close" aria-label="Close">×</button>
+      </div>
+      <div id="teachersContent" class="modal-body data-modal__body"></div>
     </div>
   </div>
 

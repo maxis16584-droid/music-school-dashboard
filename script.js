@@ -36,7 +36,7 @@ let _scheduleFetchedAt = 0;
 let _cacheFrom = null;
 let _cacheTo = null;
 // Fast lookup for calendar cells (key: `${dateIso}|${timeHH}` -> `.slot-bookings` element)
-let _cellMap = null;
+let _cellMap = null; // key -> array of `.slot-bookings` containers for that slot
 let _loadingCount = 0;
 let _cacheDirty = true;
 
@@ -58,6 +58,7 @@ function markCacheDirty(){ _cacheDirty = true; }
 
 function renderCalendar() {
   const container = document.getElementById('calendar');
+  if (!container) return;
   const weekStart = currentWeekStart;
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
   const todayIso = ymd(new Date());
@@ -65,6 +66,18 @@ function renderCalendar() {
   // Week range label in Gregorian, e.g., Mon, 15 Sep 2025 – Sun, 21 Sep 2025
   const startLabel = gregLabel(days[0]);
   const endLabel = gregLabel(days[6]);
+
+  const dayMeta = days.map(d => {
+    const iso = ymd(d);
+    const isToday = (iso === todayIso);
+    const weekdayShort = d.toLocaleDateString(DEFAULT_LABEL_LOCALE, { weekday: 'short' });
+    const weekdayLong = d.toLocaleDateString(DEFAULT_LABEL_LOCALE, { weekday: 'long' });
+    const dayNumber = d.toLocaleDateString(DEFAULT_LABEL_LOCALE, { day: 'numeric' });
+    const monthShort = d.toLocaleDateString(DEFAULT_LABEL_LOCALE, { month: 'short' });
+    const headerDate = `${dayNumber} ${monthShort}`;
+    const year = d.getFullYear();
+    return { iso, isToday, weekdayShort, weekdayLong, headerDate, year };
+  });
 
   let html = '';
   html += `<div class="cal-nav">
@@ -77,35 +90,81 @@ function renderCalendar() {
   </div>`;
 
   html += '<div class="cal-table-wrap"><table class="cal-table"><thead><tr><th class="cal-time">Time</th>';
-  days.forEach(d => { const dIso = ymd(d); const isToday = (dIso === todayIso); html += `<th data-date="${dIso}"${isToday ? ' class="is-today"' : ''}>${gregLabel(d)}</th>`; });
+  dayMeta.forEach(meta => {
+    const cls = meta.isToday ? ' class="is-today"' : '';
+    const aria = `${meta.weekdayLong} ${meta.headerDate} ${meta.year}`;
+    html += `<th data-date="${meta.iso}" data-day="${meta.weekdayLong}"${cls} aria-label="${aria}">`
+         +  `<span class="cal-header__dow">${meta.weekdayShort}</span>`
+         +  `<span class="cal-header__date">${meta.headerDate}</span>`
+         +  `<span class="cal-header__year">${meta.year}</span>`
+         +  `</th>`;
+  });
   html += '</tr></thead><tbody>';
 
   for (let h = START_HOUR; h <= END_HOUR; h++) {
     html += '<tr>';
     html += `<td class="cal-time">${String(h).padStart(2,'0')}:00</td>`;
-    days.forEach(d => {
-      const dateIso = ymd(d);
+    dayMeta.forEach(meta => {
       const timeHH = `${String(h).padStart(2,'0')}:00`;
-      const isToday = (dateIso === todayIso);
-      html += `<td class="cal-cell${isToday ? ' is-today' : ''}" data-date="${dateIso}" data-time="${timeHH}">`
-           +  `<div class="cell-actions"><button class="add-btn" data-date="${dateIso}" data-time="${timeHH}">+ Add</button></div>`
+      html += `<td class="cal-cell${meta.isToday ? ' is-today' : ''}" data-date="${meta.iso}" data-time="${timeHH}" data-day="${meta.weekdayLong}" data-day-short="${meta.weekdayShort}" data-date-label="${meta.headerDate}">`
+           +  `<div class="cell-actions"><button class="add-btn" data-date="${meta.iso}" data-time="${timeHH}">+ Add</button></div>`
            +  `<div class="slot-bookings"></div>`
            +  `</td>`;
     });
     html += '</tr>';
   }
   html += '</tbody></table></div>';
+
+  html += '<div class="cal-stack" aria-live="polite">';
+  dayMeta.forEach(meta => {
+    const todayClass = meta.isToday ? ' is-today' : '';
+    html += `<section class="cal-stack__day${todayClass}" data-date="${meta.iso}" data-day="${meta.weekdayLong}" aria-label="${meta.weekdayLong} ${meta.headerDate} ${meta.year}">`
+         +  `<header class="cal-stack__header">`
+         +    `<div class="cal-stack__heading">`
+         +      `<span class="cal-stack__dow">${meta.weekdayShort}</span>`
+         +      `<span class="cal-stack__date">${meta.headerDate}</span>`
+         +    `</div>`
+         +    `<span class="cal-stack__year">${meta.year}</span>`
+         +  `</header>`
+         +  `<div class="cal-stack__slots">`;
+    for (let h = START_HOUR; h <= END_HOUR; h++) {
+      const timeHH = `${String(h).padStart(2,'0')}:00`;
+      html += `<article class="cal-stack__slot" data-date="${meta.iso}" data-time="${timeHH}">`
+           +    `<div class="cal-stack__slot-head">`
+           +      `<span class="cal-stack__time">${timeHH}</span>`
+           +      `<button class="add-btn" data-date="${meta.iso}" data-time="${timeHH}">+ Add</button>`
+           +    `</div>`
+           +    `<div class="slot-bookings"></div>`
+           +  `</article>`;
+    }
+    html +=   `</div>`
+         + `</section>`;
+  });
+  html += '</div>';
+
   container.innerHTML = html;
 
   // Index cells for O(1) lookup during rendering
   _cellMap = new Map();
+  const registerCell = (dateIso, timeHH, box) => {
+    if (!dateIso || !timeHH || !box) return;
+    const key = `${dateIso}|${timeHH}`;
+    if (!_cellMap.has(key)) _cellMap.set(key, []);
+    _cellMap.get(key).push(box);
+  };
   container.querySelectorAll('.cal-cell').forEach(cell => {
-    const dateIso = cell.getAttribute('data-date');
-    const timeHH = cell.getAttribute('data-time');
-    const box = cell.querySelector('.slot-bookings');
-    if (dateIso && timeHH && box) {
-      _cellMap.set(`${dateIso}|${timeHH}`, box);
-    }
+    registerCell(
+      cell.getAttribute('data-date'),
+      cell.getAttribute('data-time'),
+      cell.querySelector('.slot-bookings')
+    );
+  });
+  container.querySelectorAll('.cal-stack__slot').forEach(slot => {
+    registerCell(
+      slot.getAttribute('data-date'),
+      slot.getAttribute('data-time'),
+      slot.querySelector('.slot-bookings')
+    );
   });
 
   // Add booking buttons
@@ -235,7 +294,11 @@ async function loadSchedule() {
     }
 
     // Clear only booking containers using the indexed map
-    if (_cellMap) { _cellMap.forEach(box => { box.textContent = ''; }); }
+    if (_cellMap) {
+      _cellMap.forEach(list => {
+        list.forEach(box => { box.textContent = ''; });
+      });
+    }
 
     const normalized = [];
     (schedule||[]).forEach(row => {
@@ -295,12 +358,15 @@ async function loadSchedule() {
       arr.push(ev);
     }
     groups.forEach((list, key) => {
-      const cell = _cellMap ? _cellMap.get(key) : null;
-      if (!cell) return;
-      const frag = document.createDocumentFragment();
-      for (const ev of list) frag.appendChild(buildBookingEl(ev));
-      cell.appendChild(frag);
+      const cells = _cellMap ? _cellMap.get(key) : null;
+      if (!cells) return;
+      cells.forEach(box => {
+        const frag = document.createDocumentFragment();
+        for (const ev of list) frag.appendChild(buildBookingEl(ev));
+        box.appendChild(frag);
+      });
     });
+    refreshDataModals();
   } catch (err) {
     if (err?.name === 'AbortError') return; // ignore aborted fetches
     console.error('loadSchedule error', err);
@@ -442,7 +508,11 @@ function normalizeTeacherLabelClient(t){
 function renderVisibleFromCache(){
   if (!_normalizedCache) return;
   // Clear containers via indexed map
-  if (_cellMap) { _cellMap.forEach(box => { box.textContent = ''; }); }
+  if (_cellMap) {
+    _cellMap.forEach(list => {
+      list.forEach(box => { box.textContent = ''; });
+    });
+  }
   const start = currentWeekStart; const end = addDays(start, 6);
   const startY = ymd(start); const endY = ymd(end);
   // Batch DOM appends per cell
@@ -455,12 +525,546 @@ function renderVisibleFromCache(){
     arr.push(ev);
   }
   groups.forEach((list, key) => {
-    const cell = _cellMap ? _cellMap.get(key) : null;
-    if (!cell) return;
-    const frag = document.createDocumentFragment();
-    for (const ev of list) frag.appendChild(buildBookingEl(ev));
-    cell.appendChild(frag);
+    const cells = _cellMap ? _cellMap.get(key) : null;
+    if (!cells) return;
+    cells.forEach(box => {
+      const frag = document.createDocumentFragment();
+      for (const ev of list) frag.appendChild(buildBookingEl(ev));
+      box.appendChild(frag);
+    });
   });
+  refreshDataModals();
+}
+
+// ---------- Overview modals ----------
+const studentsBtn = document.getElementById('studentsBtn');
+const studentsModal = document.getElementById('studentsModal');
+const studentsClose = document.getElementById('studentsClose');
+const studentsContent = document.getElementById('studentsContent');
+const teachersBtn = document.getElementById('teachersBtn');
+const teachersModal = document.getElementById('teachersModal');
+const teachersClose = document.getElementById('teachersClose');
+const teachersContent = document.getElementById('teachersContent');
+let _statsPriming = null;
+
+studentsBtn?.addEventListener('click', async () => {
+  await openStudentsModal();
+});
+teachersBtn?.addEventListener('click', async () => {
+  await openTeachersModal();
+});
+
+studentsClose?.addEventListener('click', closeStudentsModal);
+studentsModal?.addEventListener('click', (e) => { if (e.target === studentsModal) closeStudentsModal(); });
+teachersClose?.addEventListener('click', closeTeachersModal);
+teachersModal?.addEventListener('click', (e) => { if (e.target === teachersModal) closeTeachersModal(); });
+
+async function openStudentsModal(){
+  if (!studentsModal || !studentsContent) return;
+  studentsModal.hidden = false;
+  if (_normalizedCache && _normalizedCache.length) {
+    populateStudentsModal();
+    return;
+  }
+  studentsContent.textContent = '';
+  studentsContent.appendChild(makeInfoParagraph('กำลังโหลดข้อมูลจากตาราง...'));
+  const hasData = await ensureSchedulePrimed();
+  if (!hasData) {
+    studentsContent.textContent = '';
+    studentsContent.appendChild(makeInfoParagraph('ยังไม่มีข้อมูลนักเรียนในช่วงนี้'));
+    return;
+  }
+  populateStudentsModal();
+}
+
+async function openTeachersModal(){
+  if (!teachersModal || !teachersContent) return;
+  teachersModal.hidden = false;
+  if (_normalizedCache && _normalizedCache.length) {
+    populateTeachersModal();
+    return;
+  }
+  teachersContent.textContent = '';
+  teachersContent.appendChild(makeInfoParagraph('กำลังโหลดข้อมูลจากตาราง...'));
+  const hasData = await ensureSchedulePrimed();
+  if (!hasData) {
+    teachersContent.textContent = '';
+    teachersContent.appendChild(makeInfoParagraph('ยังไม่มีข้อมูลการสอนในช่วงนี้'));
+    return;
+  }
+  populateTeachersModal();
+}
+
+function closeStudentsModal(){ if (studentsModal) studentsModal.hidden = true; }
+function closeTeachersModal(){ if (teachersModal) teachersModal.hidden = true; }
+
+function populateStudentsModal(){
+  if (!studentsContent) return;
+  const summaries = collectStudentSummaries();
+  studentsContent.textContent = '';
+  if (!summaries.length) {
+    studentsContent.appendChild(makeInfoParagraph('ยังไม่มีข้อมูลนักเรียนในช่วงนี้'));
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'student-list';
+  summaries.forEach((student, idx) => {
+    const item = document.createElement('li');
+    item.className = 'student-item';
+    const header = document.createElement('div');
+    header.className = 'student-item__header';
+
+    const title = document.createElement('div');
+    title.className = 'student-item__title';
+    title.textContent = student.code
+      ? `${student.name || 'ไม่ระบุชื่อ'} (${student.code})`
+      : (student.name || 'ไม่ระบุชื่อ');
+    header.appendChild(title);
+
+    let details = null;
+    let toggleBtn = null;
+    if (student.completedDates && student.completedDates.length) {
+      toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'student-item__toggle';
+      toggleBtn.textContent = 'ดูวันที่เรียน';
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      const detailsId = `student-details-${idx}`;
+      toggleBtn.setAttribute('data-target', detailsId);
+      header.appendChild(toggleBtn);
+
+      details = document.createElement('div');
+      details.className = 'student-item__details';
+      details.id = detailsId;
+
+      const label = document.createElement('span');
+      label.className = 'student-item__details-label';
+      label.textContent = 'วันที่เรียนที่ผ่านมา';
+      details.appendChild(label);
+
+      const datesList = document.createElement('ul');
+      datesList.className = 'student-item__dates';
+      student.completedDates.forEach(dateLabel => {
+        const li = document.createElement('li');
+        li.textContent = dateLabel || '-';
+        datesList.appendChild(li);
+      });
+      details.appendChild(datesList);
+    }
+
+    item.appendChild(header);
+
+    const pills = document.createElement('div');
+    pills.className = 'student-item__pills';
+
+    const usedSpan = document.createElement('span');
+    usedSpan.className = 'student-item__pill student-item__pill--used';
+    usedSpan.textContent = `เรียนแล้ว ${student.progressLabel}`;
+    pills.appendChild(usedSpan);
+
+    if (student.remainingLabel && student.remainingLabel !== 'ไม่ระบุ') {
+      const remainingSpan = document.createElement('span');
+      remainingSpan.className = 'student-item__pill student-item__pill--remaining';
+      remainingSpan.textContent = `เหลือ ${student.remainingLabel}`;
+      pills.appendChild(remainingSpan);
+    }
+
+    if (student.totalLabel) {
+      const totalSpan = document.createElement('span');
+      totalSpan.className = 'student-item__pill student-item__pill--total';
+      totalSpan.textContent = `รวม ${student.totalLabel}`;
+      pills.appendChild(totalSpan);
+    }
+    item.appendChild(pills);
+
+    const teachersRow = document.createElement('div');
+    teachersRow.className = 'student-item__teachers';
+    const teacherLabel = document.createElement('span');
+    teacherLabel.className = 'student-item__teachers-label';
+    teacherLabel.textContent = 'ครูผู้สอน:';
+    teachersRow.appendChild(teacherLabel);
+
+    if (student.teachers.length) {
+      student.teachers.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'student-item__teacher-chip';
+        chip.textContent = name;
+        teachersRow.appendChild(chip);
+      });
+    } else {
+      const chip = document.createElement('span');
+      chip.className = 'student-item__teacher-chip is-empty';
+      chip.textContent = 'ไม่ระบุ';
+      teachersRow.appendChild(chip);
+    }
+
+    item.appendChild(teachersRow);
+
+    if (toggleBtn && details) {
+      item.appendChild(details);
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = details.classList.toggle('is-open');
+        toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        toggleBtn.textContent = isOpen ? 'ซ่อนวันที่เรียน' : 'ดูวันที่เรียน';
+      });
+    }
+
+    list.appendChild(item);
+  });
+  studentsContent.appendChild(list);
+}
+
+function populateTeachersModal(){
+  if (!teachersContent) return;
+  const referenceDate = new Date();
+  const summaries = collectTeacherSummaries(referenceDate);
+  teachersContent.textContent = '';
+  const caption = document.createElement('p');
+  caption.className = 'teacher-month-caption';
+  caption.textContent = `ข้อมูลประจำเดือน ${formatMonthLabel(referenceDate)}`;
+  teachersContent.appendChild(caption);
+
+  if (!summaries.length) {
+    teachersContent.appendChild(makeInfoParagraph('ยังไม่มีข้อมูลการสอนในเดือนนี้'));
+    return;
+  }
+
+  const list = document.createElement('ul');
+  list.className = 'teacher-list';
+
+  summaries.forEach((teacher, idx) => {
+    const row = document.createElement('li');
+    row.className = 'teacher-row';
+
+    const head = document.createElement('div');
+    head.className = 'teacher-row__head';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'teacher-name';
+    nameEl.textContent = teacher.name;
+
+    const countBtn = document.createElement('button');
+    countBtn.className = 'teacher-count';
+    countBtn.type = 'button';
+    countBtn.textContent = `${teacher.count} ครั้ง`;
+    const detailsId = `teacher-details-${teacher.key}-${idx}`;
+    countBtn.setAttribute('data-target', detailsId);
+    countBtn.setAttribute('aria-expanded', 'false');
+
+    head.appendChild(nameEl);
+    head.appendChild(countBtn);
+    row.appendChild(head);
+
+    const details = document.createElement('div');
+    details.className = 'teacher-details';
+    details.id = detailsId;
+
+    if (teacher.students.length) {
+      const studentsList = document.createElement('ul');
+      studentsList.className = 'teacher-students';
+      teacher.students.forEach(student => {
+        const li = document.createElement('li');
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = student.code ? `${student.name} (${student.code})` : student.name;
+        const countSpan = document.createElement('span');
+        countSpan.className = 'teacher-student__count';
+        countSpan.textContent = `${student.count} ครั้ง`;
+        li.appendChild(nameSpan);
+        li.appendChild(document.createTextNode(' – '));
+        li.appendChild(countSpan);
+        if (student.instruments.length) {
+          const instSpan = document.createElement('span');
+          instSpan.className = 'teacher-student__instrument';
+          instSpan.textContent = student.instruments.join(', ');
+          li.appendChild(document.createTextNode(' – '));
+          li.appendChild(instSpan);
+        }
+        studentsList.appendChild(li);
+      });
+      details.appendChild(studentsList);
+    } else {
+      const empty = document.createElement('span');
+      empty.className = 'teacher-details__empty';
+      empty.textContent = 'ยังไม่มีข้อมูลผู้เรียนในเดือนนี้';
+      details.appendChild(empty);
+    }
+
+    row.appendChild(details);
+    list.appendChild(row);
+  });
+
+  teachersContent.appendChild(list);
+
+  teachersContent.querySelectorAll('.teacher-count').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const panel = targetId ? document.getElementById(targetId) : null;
+      if (!panel) return;
+      const isOpen = panel.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  });
+}
+
+function collectStudentSummaries(){
+  if (!_normalizedCache || !_normalizedCache.length) return [];
+  const map = new Map();
+  const remainingKeys = ['CourseRemaining','Remaining','RemainingSessions','RemainingHours'];
+  const collator = new Intl.Collator(DEFAULT_LABEL_LOCALE, { sensitivity:'base', numeric:true });
+  const now = new Date();
+  for (const ev of _normalizedCache) {
+    const codeRaw = String(ev.code || '').trim();
+    const nameRaw = String(ev.name || '').trim();
+    const key = (codeRaw && codeRaw.toUpperCase()) || nameRaw;
+    if (!key) continue;
+    let entry = map.get(key);
+    if (!entry) {
+      entry = {
+        code: codeRaw,
+        name: nameRaw || 'ไม่ระบุชื่อ',
+        teachers: new Set(),
+        used: 0,
+        total: 0,
+        remainingHint: Number.POSITIVE_INFINITY,
+        completedCount: 0,
+        completedDates: []
+      };
+      map.set(key, entry);
+    }
+    if (codeRaw && !entry.code) entry.code = codeRaw;
+    if (nameRaw && entry.name === 'ไม่ระบุชื่อ') entry.name = nameRaw;
+    entry.teachers.add(teacherDisplayName(ev.teacher));
+    const usedVal = toNumber(ev.used);
+    if (usedVal != null) entry.used = Math.max(entry.used, usedVal);
+    const totalVal = toNumber(ev.total);
+    if (totalVal != null) entry.total = Math.max(entry.total, totalVal);
+    const remainingVal = pickNumericFromRow(ev.row, remainingKeys);
+    if (remainingVal != null) entry.remainingHint = Math.min(entry.remainingHint, remainingVal);
+    const eventDateTime = (() => {
+      if (!ev.dateIso) return null;
+      const stamp = `${ev.dateIso}T${ev.timeHH || '00:00'}`;
+      const d = new Date(stamp);
+      return isNaN(d.getTime()) ? null : d;
+    })();
+    if (eventDateTime && eventDateTime <= now) {
+      entry.completedCount += 1;
+      entry.completedDates.push(eventDateTime);
+    }
+  }
+  const result = [];
+  map.forEach(entry => {
+    const sortedDates = entry.completedDates
+      .filter(d => d instanceof Date && !isNaN(d.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+    let completed = sortedDates.length > 0 ? sortedDates.length : entry.completedCount;
+    if (!completed && entry.used > 0) completed = entry.used;
+
+    let remaining = Number.isFinite(entry.remainingHint)
+      ? Math.max(entry.remainingHint, 0)
+      : null;
+    let total = entry.total > 0 ? entry.total : null;
+
+    if (total == null && entry.used > 0 && remaining != null) {
+      total = entry.used + remaining;
+    }
+    if (total == null && remaining != null) {
+      total = remaining + completed;
+    }
+    if (total != null && completed > total) {
+      completed = total;
+    }
+    if (total != null) {
+      remaining = Math.max(total - completed, 0);
+    } else if (remaining != null && remaining < 0) {
+      remaining = 0;
+    }
+
+    const teachers = Array.from(entry.teachers);
+    teachers.sort((a, b) => collator.compare(a, b));
+
+    const progressLabel = total != null ? `${completed} / ${total} ครั้ง` : `${completed} ครั้ง`;
+    const remainingLabel = remaining != null ? `${remaining} ครั้ง` : 'ไม่ระบุ';
+    const totalLabel = total != null ? `${total} ครั้ง` : '';
+    const completedDates = sortedDates.map(formatDateDDMM);
+
+    result.push({
+      code: entry.code,
+      name: entry.name,
+      teachers,
+      used: completed,
+      completedCount: completed,
+      progressLabel,
+      remaining,
+      remainingLabel,
+      total,
+      totalLabel,
+      completedDates
+    });
+  });
+  result.sort((a, b) => collator.compare(a.name, b.name));
+  return result;
+}
+
+function collectTeacherSummaries(referenceDate = new Date()){
+  if (!_normalizedCache || !_normalizedCache.length) return [];
+  const targetYear = referenceDate.getFullYear();
+  const targetMonth = referenceDate.getMonth() + 1; // 1-based
+  const map = new Map();
+  const collator = new Intl.Collator(DEFAULT_LABEL_LOCALE, { sensitivity:'base', numeric:true });
+  _normalizedCache.forEach(ev => {
+    const iso = ev.dateIso;
+    if (!iso) return;
+    const year = Number(iso.slice(0,4));
+    const month = Number(iso.slice(5,7));
+    if (year !== targetYear || month !== targetMonth) return;
+    const teacherKey = normalizeTeacherKey(ev.teacher);
+    const teacherName = teacherDisplayName(ev.teacher);
+    let entry = map.get(teacherKey);
+    if (!entry) {
+      entry = { key: teacherKey, name: teacherName, count: 0, students: new Map() };
+      map.set(teacherKey, entry);
+    }
+    entry.count += 1;
+    const studentCode = String(ev.code || '').trim().toUpperCase();
+    const studentName = String(ev.name || '').trim() || 'ไม่ระบุชื่อ';
+    const studentKey = studentCode || studentName;
+    let student = entry.students.get(studentKey);
+    if (!student) {
+      student = { name: studentName, code: studentCode, count: 0, instruments: new Set() };
+      entry.students.set(studentKey, student);
+    }
+    student.count += 1;
+    const instrument = extractInstrument(ev.row);
+    if (instrument) student.instruments.add(instrument);
+  });
+
+  const summaries = [];
+  map.forEach(entry => {
+    const students = Array.from(entry.students.values()).map(student => {
+      const instruments = Array.from(student.instruments);
+      instruments.sort((a, b) => collator.compare(a, b));
+      return {
+        name: student.name,
+        code: student.code,
+        count: student.count,
+        instruments
+      };
+    });
+    students.sort((a, b) => {
+      const byCount = b.count - a.count;
+      if (byCount !== 0) return byCount;
+      return collator.compare(a.name, b.name);
+    });
+    summaries.push({
+      key: entry.key,
+      name: entry.name,
+      count: entry.count,
+      students
+    });
+  });
+
+  summaries.sort((a, b) => {
+    const byCount = b.count - a.count;
+    if (byCount !== 0) return byCount;
+    return collator.compare(a.name, b.name);
+  });
+
+  return summaries;
+}
+
+function teacherDisplayName(raw){
+  const s = String(raw || '').trim();
+  if (s) return s;
+  return 'Others';
+}
+
+function extractInstrument(row){
+  if (!row || typeof row !== 'object') return '';
+  const preferredKeys = ['Instrument','CourseName','Course','Course Label','CourseLabel','CourseTitle','InstrumentName','Instrument Name','Lesson','Subject'];
+  const keys = Object.keys(row);
+  for (const pref of preferredKeys) {
+    const match = keys.find(k => k === pref || k.toLowerCase() === pref.toLowerCase());
+    if (!match) continue;
+    const value = row[match];
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function pickNumericFromRow(row, keys){
+  if (!row || typeof row !== 'object') return null;
+  const rowKeys = Object.keys(row);
+  for (const target of keys) {
+    const match = rowKeys.find(k => k === target || k.toLowerCase() === target.toLowerCase());
+    if (!match) continue;
+    const val = toNumber(row[match]);
+    if (val != null) return val;
+  }
+  return null;
+}
+
+function toNumber(val){
+  if (val == null) return null;
+  const n = Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function ensureSchedulePrimed(){
+  if (_normalizedCache && _normalizedCache.length) return true;
+  if (_statsPriming) {
+    try { await _statsPriming; } catch {}
+    return !!(_normalizedCache && _normalizedCache.length);
+  }
+  _statsPriming = (async () => {
+    try { await loadSchedule(); } catch (err) { console.error('ensureSchedulePrimed error', err); }
+  })();
+  try {
+    await _statsPriming;
+  } finally {
+    _statsPriming = null;
+  }
+  return !!(_normalizedCache && _normalizedCache.length);
+}
+
+function formatMonthLabel(d){
+  try {
+    return d.toLocaleDateString(DEFAULT_LABEL_LOCALE, { month:'long', year:'numeric' });
+  } catch {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+}
+
+function makeInfoParagraph(text){
+  const p = document.createElement('p');
+  p.className = 'data-empty';
+  p.textContent = text;
+  return p;
+}
+
+function refreshDataModals(){
+  if (studentsModal && !studentsModal.hidden) populateStudentsModal();
+  if (teachersModal && !teachersModal.hidden) populateTeachersModal();
+}
+
+function formatDateDDMM(input){
+  let d = null;
+  if (input instanceof Date) {
+    d = input;
+  } else if (typeof input === 'string' && input) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(input)) {
+      const parts = input.split('-');
+      d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    } else {
+      const parsed = new Date(input);
+      if (!isNaN(parsed.getTime())) d = parsed;
+    }
+  }
+  if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2,'0');
+  const month = String(d.getMonth() + 1).padStart(2,'0');
+  return `${day}/${month}`;
 }
 
 // ---------- Notes modal ----------
